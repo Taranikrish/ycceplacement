@@ -13,6 +13,8 @@ const logout = require('./routes/logout');
 const searchStudent = require('./routes/admincontrollerroute/studentsea');
 const searchCompany = require('./routes/companysea');
 const companyVerification = require('./routes/admincontrollerroute/companyverification');
+const jobRoutes = require('./routes/companyaddjob/jobRoutes');
+
 
 const port = process.env.PORT || 3000;
 app.use(express.json());
@@ -36,10 +38,12 @@ passport.serializeUser((user, done) => done(null, user.id));
 passport.deserializeUser((user, done) => done(null, user));
 
 
+
 // Routes
 app.use('/api/students', searchStudent);
 app.use('/api/companies', searchCompany);
 app.use('/api/companies', companyVerification);
+app.use('/api/jobs', jobRoutes);
 
 
 // app.get('/', (req, res) => {
