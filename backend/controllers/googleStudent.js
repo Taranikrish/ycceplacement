@@ -24,6 +24,7 @@ async (accessToken, refreshToken, profile, done) => {
                 googleId: profile.id,
                 name: profile.displayName,
                 emailId: profile.emails[0].value,
+                rollNumber: email.split('@')[0], // Extract roll number from email
                 picture: profile.photos[0].value
             });
             await user.save();

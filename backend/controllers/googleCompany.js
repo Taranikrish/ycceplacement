@@ -9,14 +9,22 @@ passport.use('google-company', new GoogleStrategy({
     callbackURL: process.env.COMPANY_CALLBACK
   },
   async (accessToken, refreshToken, profile, done) => {
-    let company = await Company.findOne({ googleId: profile.id });
-    if (!company) {
-      company = await Company.create({
-        googleId: profile.id,
-        name: profile.displayName,
-        emailId: profile.emails[0].value
-      });
+    try {
+      let company = await Company.findOne({ googleId: profile.id });
+      if (!company) {
+        company = await Company.create({
+          googleId: profile.id,
+          name: profile.displayName,
+          emailId: profile.emails[0].value,
+          phoneNumber: '', // Will be filled later
+          location: '', // Will be filled later
+          contactPerson: '' // Will be filled later
+        });
+      }
+      return done(null, company);
+    } catch (err) {
+      console.error('Google Company Auth Error:', err);
+      return done(err, null);
     }
-    return done(null, company);
   }
 ));

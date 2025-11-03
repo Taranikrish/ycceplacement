@@ -21,7 +21,10 @@ const searchCompany = async (req, res) => {
     }
     console.log('Query:', req.query);
 
-    const companies = await Company.find(filter).limit(10);
+    const companies = await Company.find(filter)
+      .select('name emailId phoneNumber location contactPerson isVerified createdAt')
+      .limit(10);
+
     res.json(companies);
   } catch (err) {
     console.error('Company Search Error:', err);
