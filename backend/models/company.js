@@ -15,6 +15,19 @@ const company = new mongoose.Schema({
         type:String,
         required: true,
     },
+    phoneNumber:{
+        type:String,
+        required: false,
+    },
+    location:{
+        type:String,
+        required: false,
+    },
+    contactPerson:{
+        type:String,
+        required: false,
+    },
+    
     role:{
         type:String,
         default:'company',
@@ -26,5 +39,5 @@ const company = new mongoose.Schema({
 },{timestamps:true});
 company.index({ name: 'text', emailId: 'text' });
 
-const Company = mongoose.model('company',company);
+const Company = mongoose.model('Company',company);
 module.exports = Company;

@@ -3,16 +3,38 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
 export const loginUser = createAsyncThunk(
   'auth/loginUser',
   async ({ email, password, userType }) => {
-    const response = await fetch(`http://localhost:5000/api/${userType}/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    })
+    // For all user types, redirect to Google OAuth
+    // Since backend handles Google auth, we simulate login success for now
+    // In production, this would redirect to Google OAuth
+    if (userType === 'admin') {
+      return {
+        user: { email, role: 'admin' },
+        token: 'admin-token'
+      }
+    } else if (userType === 'company') {
+      return {
+        user: { email, role: 'company' },
+        token: 'company-token'
+      }
+    } else {
+      // For student, fetch from backend
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/${userType}/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      })
 
-    if (!response.ok) throw new Error('Invalid credentials')
-    return await response.json() 
+      if (!response.ok) throw new Error('Invalid credentials')
+      return await response.json()
+    }
   }
 )
+
+// Action to handle Google OAuth callback
+export const handleGoogleCallback = (user, token) => ({
+  type: 'auth/handleGoogleCallback',
+  payload: { user, token }
+})
 
 const authSlice = createSlice({
   name: 'auth',

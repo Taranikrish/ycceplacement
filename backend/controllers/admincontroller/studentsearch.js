@@ -4,7 +4,7 @@ const Student = require('../../models/student');
 const studentsearch = async (req, res) => {
     try {
         const query = req.query.q; // e.g. /api/students/search?q=s
-        if (!query) return res.json([]);
+        if (!query?.trim()) return res.json([]);
 
         // Case-insensitive partial match for name or emailId
         const students = await Student.find({

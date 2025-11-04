@@ -9,14 +9,19 @@ passport.use('google-admin', new GoogleStrategy({
     callbackURL: process.env.ADMIN_CALLBACK
   },
   async (accessToken, refreshToken, profile, done) => {
-    let admin = await Admin.findOne({ googleId: profile.id });
-    if (!admin) {
-      admin = await Admin.create({
-        googleId: profile.id,
-        name: profile.displayName,
-        email: profile.emails[0].value,
-      });
+    try {
+      let admin = await Admin.findOne({ googleId: profile.id });
+      if (!admin) {
+        admin = await Admin.create({
+          googleId: profile.id,
+          name: profile.displayName,
+          emailId: profile.emails[0].value,
+        });
+      }
+      return done(null, admin);
+    } catch (err) {
+      console.error('Google Admin Auth Error:', err);
+      return done(err, null);
     }
-    return done(null, admin);
   }
 ));
