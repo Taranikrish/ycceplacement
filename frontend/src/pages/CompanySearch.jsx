@@ -121,10 +121,10 @@ function CompanySearch() {
   }
 
   return (
-    <div className="flex h-screen">
+    <div className="flex min-h-screen bg-gray-50">
       <AdminSidebar />
-      <div className="flex-1 p-6">
-        <h1 className="text-2xl font-bold mb-6">Company Search</h1>
+      <div className="flex-1 p-6 md:ml-0 ml-0">
+        <h1 className="text-3xl font-bold text-gray-900 mb-8">Company Search</h1>
 
         {/* Filter Controls */}
         <div className="mb-6 bg-white p-4 rounded-lg shadow-md">
@@ -191,7 +191,7 @@ function CompanySearch() {
                           </span>
                         </div>
                       </div>
-                      <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700">Location</label>
                           <p className="mt-1 text-sm text-gray-600">{company.location}</p>
@@ -200,8 +200,7 @@ function CompanySearch() {
                           <label className="block text-sm font-medium text-gray-700">Contact Person</label>
                           <p className="mt-1 text-sm text-gray-600">{company.contactPerson}</p>
                         </div>
-                      </div>
-                      <div className="mt-4 flex gap-2">
+                        <div className="mt-4 flex gap-2">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -227,6 +226,8 @@ function CompanySearch() {
                           {deleting === company._id ? 'Deleting...' : 'Delete'}
                         </button>
                       </div>
+                      </div>
+                      
                     </div>
                   ))}
                 </div>

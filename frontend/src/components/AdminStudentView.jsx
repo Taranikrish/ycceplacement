@@ -63,11 +63,11 @@ function AdminStudentView() {
   }
 
   return (
-    <div className="flex h-screen">
+    <div className="flex min-h-screen bg-gray-50">
       <AdminSidebar />
-      <div className="flex-1 p-6">
+      <div className="flex-1 p-6 md:ml-0 ml-0">
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-3xl font-bold text-amber-800 mb-8">Student Profile</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-8">Student Profile</h1>
 
           {studentProfile && (
             <div className="bg-white rounded-lg shadow-md p-6">

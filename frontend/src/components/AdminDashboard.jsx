@@ -31,10 +31,10 @@ function AdminDashboard() {
   }, [])
 
   return (
-    <div className="flex h-screen">
+    <div className="flex min-h-screen bg-gray-50">
       <AdminSidebar />
-      <div className="flex-1 p-6">
-        <h1 className="text-2xl font-bold mb-6">Admin Profile</h1>
+      <div className="flex-1 p-6 md:ml-0 ml-0">
+        <h1 className="text-3xl font-bold text-gray-900 mb-8">Admin Profile</h1>
         {loading ? (
           <div className="text-center">Loading...</div>
         ) : adminProfile ? (

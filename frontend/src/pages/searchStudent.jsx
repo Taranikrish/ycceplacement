@@ -63,28 +63,28 @@ function SearchStudent() {
   }, []);
 
   return (
-    <div className="flex h-screen">
+    <div className="flex min-h-screen bg-gray-50">
       <AdminSidebar />
-      <div className="flex-1 p-6">
-        <h1 className="text-2xl font-bold mb-6">Search Students</h1>
+      <div className="flex-1 p-6 md:ml-0 ml-0">
+        <h1 className="text-3xl font-bold text-gray-900 mb-8">Search Students</h1>
 
         {/* Search Controls */}
         <div className="mb-6 bg-white p-4 rounded-lg shadow-md">
-          <div className="flex gap-4 items-center">
+          <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
             <button
               onClick={fetchAllStudents}
-              className="bg-amber-800 text-white px-4 py-2 rounded hover:bg-amber-700"
+              className="bg-amber-800 text-white px-4 py-2 rounded hover:bg-amber-700 w-full md:w-auto"
             >
               Get All Students
             </button>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full md:w-auto">
               <label className="text-sm font-medium">Search by:</label>
               <select
                 value={searchBy}
                 // --- Simplified: Just set the state ---
                 onChange={e => setSearchBy(e.target.value)}
-                className="border px-3 py-1 rounded"
+                className="border px-3 py-1 rounded w-full sm:w-auto"
               >
                 <option value="name">Name</option>
                 <option value="rollNumber">Roll Number</option>
@@ -99,7 +99,7 @@ function SearchStudent() {
               value={searchTerm}
               // --- Simplified: Just set the state ---
               onChange={e => setSearchTerm(e.target.value)}
-              className="border px-3 py-1 rounded flex-1 max-w-md"
+              className="border px-3 py-1 rounded flex-1 w-full md:max-w-md"
             />
           </div>
         </div>
@@ -133,8 +133,8 @@ function SearchStudent() {
                           <p className="mt-1">{student.branch || 'Not specified'}</p>
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700">CGPA</label>
-                          <p className="mt-1">{student.cgpa ? student.cgpa.toFixed(2) : 'Not calculated'}</p>
+                          <label className="block text-sm font-medium text-gray-700">Email</label>
+                          <p className="mt-1">{student.emailId }</p>
                         </div>
                       </div>
                     </div>
