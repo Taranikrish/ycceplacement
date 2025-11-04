@@ -9,7 +9,7 @@ function Home() {
   return (
     <div className='h-screen w-full relative'>
       <div >
-        <Header />
+        {!user?<Header />:""}
       </div>
       <div style={{backgroundImage:'url("/cover.webp")'}} className='bg-contain bg-cover bg-center w-full h-[80%]'></div>
       <div className='absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 grid grid-cols-1 gap-4'>
