@@ -15,6 +15,7 @@ function CompanyDashboard() {
     description: '',
     requirements: '',
     salary: '',
+    location: '',
     deadline: ''
   })
   const [activeTab, setActiveTab] = useState('profile')
@@ -386,6 +387,17 @@ function CompanyDashboard() {
                       placeholder="e.g., 5-8 LPA"
                     />
                   </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Location</label>
+                    <input
+                      type="text"
+                      value={jobData.location}
+                      onChange={(e) => setJobData({ ...jobData, location: e.target.value })}
+                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                      placeholder="e.g., Pune, Mumbai, Remote"
+                    />
+                  </div>
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Application Deadline</label>
                     <input

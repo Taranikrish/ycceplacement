@@ -3,7 +3,7 @@ const Application = require('../../models/application');
 
 const createJob = async (req, res) => {
   try {
-    const { title, description, requirements, salary, deadline } = req.body;
+    const { title, description, requirements, salary, location, deadline } = req.body;
 
     if (!title || !description) {
       return res.status(400).json({ message: "Missing job title or description" });
@@ -25,6 +25,7 @@ const createJob = async (req, res) => {
       description,
       requirements,
       salary,
+      location,
       deadline,
     });
 

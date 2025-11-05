@@ -1,9 +1,18 @@
 import React, { useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useDispatch } from 'react-redux'
+import { logout } from '../slices/authSlice.js'
 
 function CompanySidebar() {
   const location = useLocation()
   const [isOpen, setIsOpen] = useState(false)
+  const dispatch = useDispatch()      // ✅ Added
+  const navigate = useNavigate()      // ✅ Added
+
+  const handleLogout = () => {
+    dispatch(logout())
+    navigate('/')
+  }
 
   return (
     <>
@@ -53,12 +62,22 @@ function CompanySidebar() {
             >
               Applied Students
             </Link>
+            
+            <button
+              onClick={() => {
+                handleLogout()
+                setIsOpen(false)
+              }}
+              className="cursor-pointer w-full text-start hover:bg-amber-700 text-white px-4 py-2 text-sm sm:text-base 2xl:text-lg"
+            >
+              Logout
+            </button>
           </nav>
         </div>
       </div>
 
       {/* Overlay for mobile */}
-      {isOpen && <div className="fixed inset-0 z-30 bg-black bg-opacity-50 md:hidden" onClick={() => setIsOpen(false)}></div>}
+      {isOpen && <div className="fixed inset-0 z-30 bg-opacity-50 md:hidden" onClick={() => setIsOpen(false)}></div>}
     </>
   )
 }

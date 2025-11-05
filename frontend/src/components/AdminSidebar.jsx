@@ -81,7 +81,7 @@ function AdminSidebar() {
       </div>
 
       {/* Overlay for mobile */}
-      {isOpen && <div className="fixed inset-0 z-30 bg-black bg-opacity-50 md:hidden" onClick={() => setIsOpen(false)}></div>}
+      {isOpen && <div className="fixed inset-0 z-30 bg-opacity-50 md:hidden" onClick={() => setIsOpen(false)}></div>}
     </>
   )
 }

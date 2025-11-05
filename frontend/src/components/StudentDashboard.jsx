@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useSelector } from 'react-redux'
 import { useSearchParams } from 'react-router-dom'
 import StudentJobs from '../pages/StudentJobs'
+import StudentSidebar from './StudentSidebar'
 
 function StudentDashboard() {
   const [searchParams] = useSearchParams()
@@ -272,6 +273,7 @@ function StudentDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <StudentSidebar />
       <div className="max-w-6xl mx-auto p-6">
         <h1 className="text-3xl font-bold text-amber-800 mb-8">Student Dashboard</h1>
 
