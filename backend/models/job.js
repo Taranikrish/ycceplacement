@@ -21,6 +21,9 @@ const jobSchema = new mongoose.Schema({
   salary: {
     type: String,
   },
+  location: {
+    type: String,
+  },
   deadline: {
     type: Date,
   },
