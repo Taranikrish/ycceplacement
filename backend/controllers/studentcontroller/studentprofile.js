@@ -16,6 +16,7 @@ const getStudentProfile = async (req, res) => {
       rollNumber: rollNumber,
       branch: student.branch || '',
       cgpa: student.cgpa || 0,
+      mobileNumber: student.mobileNumber || '',
       sgpa: student.sgpa || [],
       domain: student.domain || [],
       isregistered: student.isregistered
@@ -48,6 +49,7 @@ const getStudentProfileById = async (req, res) => {
       rollNumber: rollNumber,
       branch: student.branch || '',
       cgpa: student.cgpa || 0,
+      mobileNumber: student.mobileNumber || '',
       sgpa: student.sgpa || [],
       domain: student.domain || [],
       isregistered: student.isregistered
@@ -60,7 +62,7 @@ const getStudentProfileById = async (req, res) => {
 
 const updateStudentProfile = async (req, res) => {
   try {
-    const { branch, sgpa, domain } = req.body;
+    const { branch, sgpa, domain, mobileNumber } = req.body;
 
     // Calculate CGPA as average of 6 sgpa values
     let cgpa = 0;
@@ -74,6 +76,7 @@ const updateStudentProfile = async (req, res) => {
         branch,
         sgpa,
         cgpa,
+        mobileNumber,
         domain,
         isregistered: true
       },
@@ -92,6 +95,7 @@ const updateStudentProfile = async (req, res) => {
         rollNumber: updatedStudent.emailId.split('@')[0],
         branch: updatedStudent.branch,
         cgpa: updatedStudent.cgpa,
+        mobileNumber: updatedStudent.mobileNumber,
         sgpa: updatedStudent.sgpa,
         domain: updatedStudent.domain,
         isregistered: updatedStudent.isregistered

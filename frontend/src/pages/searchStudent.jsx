@@ -133,8 +133,8 @@ function SearchStudent() {
                           <p className="mt-1">{student.branch || 'Not specified'}</p>
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700">Email</label>
-                          <p className="mt-1">{student.emailId }</p>
+                          <label className="block text-sm font-medium text-gray-700">Mobile Number</label>
+                          <p className="mt-1">{student.mobileNumber }</p>
                         </div>
                       </div>
                     </div>

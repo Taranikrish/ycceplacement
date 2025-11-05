@@ -94,6 +94,10 @@ function AdminStudentView() {
                   <p className="mt-1 text-lg text-gray-900">{studentProfile.cgpa ? studentProfile.cgpa.toFixed(2) : 'Not calculated'}</p>
                 </div>
                 <div>
+                  <label className="block text-sm font-medium text-gray-700">Mobile Number</label>
+                  <p className="mt-1 text-lg text-gray-900">{studentProfile.mobileNumber || 'Not provided'}</p>
+                </div>
+                <div>
                   <label className="block text-sm font-medium text-gray-700">Registration Status</label>
                   <p className={`mt-1 text-lg ${studentProfile.isregistered ? 'text-green-600' : 'text-red-600'}`}>
                     {studentProfile.isregistered ? 'Registered' : 'Not Registered'}

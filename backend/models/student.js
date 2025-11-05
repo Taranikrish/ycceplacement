@@ -21,7 +21,10 @@ const student = new mongoose.Schema({
     cgpa:{
         type:Number,
     },
-    sgpa:{
+    mobileNumber:{
+        type:String,
+    },
+    sgpa: {
         type:[Number],
         required: true
     },

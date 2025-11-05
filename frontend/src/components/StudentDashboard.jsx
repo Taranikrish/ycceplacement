@@ -12,6 +12,7 @@ function StudentDashboard() {
   const [saving, setSaving] = useState(false)
   const [formData, setFormData] = useState({
     branch: '',
+    mobileNumber: '',
     sgpa: ['', '', '', '', '', ''],
     domain: []
   })
@@ -53,6 +54,7 @@ function StudentDashboard() {
         setStudentProfile(data)
         setFormData({
           branch: data.branch || '',
+          mobileNumber: data.mobileNumber || '',
           sgpa: data.sgpa || ['', '', '', '', '', ''],
           domain: data.domain || []
         })
@@ -116,6 +118,7 @@ function StudentDashboard() {
         },
         body: JSON.stringify({
           branch: formData.branch,
+          mobileNumber: formData.mobileNumber,
           sgpa: formData.sgpa.map(s => s ? parseFloat(s) : 0),
           domain: formData.domain
         })
@@ -315,6 +318,10 @@ function StudentDashboard() {
                 <p className="mt-1 text-lg text-gray-900">{studentProfile.cgpa ? studentProfile.cgpa.toFixed(2) : 'Not calculated'}</p>
               </div>
               <div>
+                <label className="block text-sm font-medium text-gray-700">Mobile Number</label>
+                <p className="mt-1 text-lg text-gray-900">{studentProfile.mobileNumber || 'Not provided'}</p>
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-gray-700">Registration Status</label>
                 <p className={`mt-1 text-lg ${studentProfile.isregistered ? 'text-green-600' : 'text-red-600'}`}>
                   {studentProfile.isregistered ? 'Registered' : 'Not Registered'}
@@ -378,6 +385,19 @@ function StudentDashboard() {
                     <option key={index} value={branch}>{branch}</option>
                   ))}
                 </select>
+              </div>
+
+              {/* Mobile Number Input */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Mobile Number</label>
+                <input
+                  type="tel"
+                  name="mobileNumber"
+                  value={formData.mobileNumber}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  placeholder="Enter your mobile number"
+                />
               </div>
 
               {/* SGPA Inputs */}
