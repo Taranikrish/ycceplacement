@@ -2,7 +2,8 @@ const Company = require('../../models/company');
 
 const getCompanyProfile = async (req, res) => {
   try {
-    const company = await Company.findById(req.user._id);
+    const companyId = req.params.companyId || req.user._id;
+    const company = await Company.findById(companyId);
     if (!company) {
       return res.status(404).json({ message: 'Company not found' });
     }

@@ -4,6 +4,8 @@ const { getCompanyProfile, updateCompanyProfile, deleteCompanyAccount } = requir
 const { requireAuth, requireRole } = require('../../middleware/auth');
 
 router.get('/profile', requireAuth, requireRole('company'), getCompanyProfile);
+router.get('/profile/:companyId', requireAuth, requireRole(['company',"admin"]), getCompanyProfile);
+
 router.put('/profile', requireAuth, requireRole('company'), updateCompanyProfile);
 router.delete('/profile', requireAuth, requireRole('company'), deleteCompanyAccount);
 
