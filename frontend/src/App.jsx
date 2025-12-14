@@ -6,12 +6,14 @@ import Header from './components/Header.jsx'
 import Home from './pages/Home.jsx'
 import Singin from './pages/Singin.jsx'
 import AdminDashboard from './components/AdminDashboard.jsx'
-import SearchStudent from './pages/SearchStudent.jsx'
+import SearchStudent from './pages/searchStudent.jsx'
 import AdminStudentView from './components/AdminStudentView.jsx'
 import CompanySearch from './pages/CompanySearch.jsx'
 import CompanyDashboard from './components/CompanyDashboard.jsx'
 import StudentDashboard from './components/StudentDashboard.jsx'
 import StudentJobs from './pages/StudentJobs.jsx'
+import StudentProfile from './components/studentProfile.jsx'
+import StudentDetail from './components/studentDetail.jsx'
 import Jobs from './pages/Jobs.jsx'
 
 // Protected Route Component
@@ -45,7 +47,7 @@ function App() {
   return (
     <>
       <div className='h-screen w-screen'>
-        {user && <Header />}
+        
         <Routes>
           <Route path='/' element={<Home />} />
           <Route path='/Signin/:role' element={<Singin />} />
@@ -61,7 +63,7 @@ function App() {
           } />
           <Route path='/admin/student/:studentId' element={
             <ProtectedRoute allowedRoles={['admin']}>
-              <AdminStudentView />
+              <AdminStudentView role={user?.role || 'admin'} />
             </ProtectedRoute>
           } />
           <Route path='/admin/companies' element={
@@ -79,21 +81,42 @@ function App() {
               <Jobs />
             </ProtectedRoute>
           } />
+          <Route path='/company/dashboard/applications/:studentId' element={
+            <ProtectedRoute allowedRoles={['company']}>
+              <AdminStudentView role={user?.role || 'admin'} />
+            </ProtectedRoute>
+          }/>
           <Route path='/jobs' element={
-            <ProtectedRoute allowedRoles={['student']}>
-              <Jobs />
+            <ProtectedRoute allowedRoles={['student','admin']}>
+              <StudentJobs role={user?.role || 'admin'} />
             </ProtectedRoute>
           } />
           <Route path='/student/dashboard' element={
-            <ProtectedRoute allowedRoles={['student', 'admin', 'company']}>
+            <ProtectedRoute allowedRoles={['student']}>
               <StudentDashboard />
             </ProtectedRoute>
-          } />
-          <Route path='/student/jobs' element={
+          }>
+            <Route index element={
+              <ProtectedRoute allowedRoles={['student']}>
+                <StudentProfile />
+             </ProtectedRoute>} />
+            <Route path='profile' element={
+              <ProtectedRoute allowedRoles={['student']}>
+                <StudentProfile />
+             </ProtectedRoute>}
+             />
+            <Route path='details' element={
+              <ProtectedRoute allowedRoles={['student']}>
+                <StudentDetail />
+             </ProtectedRoute>}
+             />
+             <Route path='/student/dashboard/jobs' element={
             <ProtectedRoute allowedRoles={['student']}>
-              <StudentJobs />
+              <StudentJobs role={'student'}/>
             </ProtectedRoute>
           } />
+          </Route>
+          
         </Routes>
       </div>
     </>

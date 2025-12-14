@@ -1,12 +1,14 @@
 const Job = require('../../models/job');
 const Application = require('../../models/application');
 const Student = require('../../models/student');
-
+const Admin=require('../../models/admin')
 const getAvailableJobs = async (req, res) => {
   try {
     // Only registered students can view jobs
     const student = await Student.findById(req.user._id);
-    if (!student || !student.isregistered) {
+    const admin = await Admin.findById(req.user._id);
+
+    if (!(admin || (student && student.isregistered))) {
       return res.status(403).json({ message: 'Student must be registered to view jobs' });
     }
 

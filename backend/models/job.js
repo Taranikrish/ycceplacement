@@ -27,6 +27,14 @@ const jobSchema = new mongoose.Schema({
   deadline: {
     type: Date,
   },
+  jd_file:{
+    type: String,
+    default: null
+  },
+  jd_public_id: {
+    type: String,
+    default: null
+  },
   createdDate: {
     type: Date,
     default: Date.now,

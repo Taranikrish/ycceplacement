@@ -32,6 +32,15 @@ const company = new mongoose.Schema({
         type:String,
         default:'company',
     },
+    linkedInUrl:{
+        type:String,
+        required: false,
+        trim: true
+    },
+    dpiitNumber:{
+      type:String,
+      required: true,  
+    },
     isVerified: {
         type: Boolean,
         default: false, // Admin will later approve (true)

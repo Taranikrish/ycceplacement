@@ -4,7 +4,7 @@ const { getAvailableJobs, applyForJob, getStudentApplications } = require('../..
 const { requireAuth, requireRole } = require('../../middleware/auth');
 
 // Get available jobs for registered students
-router.get('/jobs', requireAuth, requireRole('student'), getAvailableJobs);
+router.get('/jobs', requireAuth, requireRole(['student','admin']), getAvailableJobs);
 
 // Apply for a job
 router.post('/jobs/apply', requireAuth, requireRole('student'), applyForJob);

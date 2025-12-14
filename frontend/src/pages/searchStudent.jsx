@@ -73,7 +73,7 @@ function SearchStudent() {
           <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
             <button
               onClick={fetchAllStudents}
-              className="bg-amber-800 text-white px-4 py-2 rounded hover:bg-amber-700 w-full md:w-auto"
+              className="bg-cyan-700/85 text-white px-4 py-2 rounded hover:bg-cyan-700 w-full md:w-auto"
             >
               Get All Students
             </button>
@@ -87,7 +87,17 @@ function SearchStudent() {
                 className="border px-3 py-1 rounded w-full sm:w-auto"
               >
                 <option value="name">Name</option>
-                <option value="rollNumber">Roll Number</option>
+                <option value="rollNumber">Registration Number</option>
+                <option value="name">CSE</option>
+                <option value="name">ME</option>
+               <option value="name">MBA </option>           
+                <option value="name">ETC</option>
+                <option value="name">CIVIL</option>
+               
+
+
+
+
               </select>
             </div>
 
@@ -118,7 +128,7 @@ function SearchStudent() {
               {filteredStudents.length > 0 ? (
                 <div className="divide-y">
                   {filteredStudents.map((student, index) => (
-                    <div key={index} className="p-4 hover:bg-gray-50 cursor-pointer" onClick={() => window.location.href = `/student/dashboard?studentId=${student._id}`}>
+                    <div key={index} className="p-4 hover:bg-gray-50 cursor-pointer" onClick={() => window.location.href = `/admin/student/${student._id}`}>
                       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700">Name</label>

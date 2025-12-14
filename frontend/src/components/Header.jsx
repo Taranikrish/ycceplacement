@@ -21,14 +21,19 @@ function Header() {
   }
 
   return (
-    <header className="bg-amber-800 text-white shadow-md">
-      <div className="container  px-2 py-3 flex items-center justify-between">
-        {/* Logo */}
-        <Link to="/" className="flex items-center">
-          <img src="/YCC Logo.png" alt="YCC Logo" className="h-8 w-8 sm:h-10 sm:w-10 2xl:h-12 2xl:w-12 mr-2 sm:mr-3 2xl:mr-4" />
-          <h1 className="text-xs sm:text-xl 2xl:text-2xl font-bold">Placement Cell, YCCE Nagpur</h1>
+    <header className="sticky top-0 z-50 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-sm shadow-sm">
+      <nav className="container px-6 py-4 flex justify-between items-center">
+        <Link className="flex items-center gap-3" to="/">
+          <img alt="YCCE College Logo" className="h-10 w-10" src="/YCC Logo.png" />
+          <span className="text-xl font-bold text-slate-600 ">Placement Cell, YCCE Nagpur</span>
         </Link>
-      </div>
+        <div className="hidden md:flex items-center  space-x-2">
+          <a className="px-4 mx-10 py-2   text-slate-600   transition-colors" href="#overview">Overview</a>
+          <a className="px-4 mx-10 py-2  text-slate-600   transition-colors" href="#info">Information</a>
+          <a className="px-4 mx-10 py-2  text-slate-600   transition-colors" href="#contact">Contact</a>
+        </div>
+        
+      </nav>
     </header>
   )
 }

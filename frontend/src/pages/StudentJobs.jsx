@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { useSelector } from 'react-redux'
+import JobDetailModal from '../components/JobDetailModal'
 
-function StudentJobs() {
+function StudentJobs({role}) {
   const [jobs, setJobs] = useState([])
   const [applications, setApplications] = useState([])
   const [loading, setLoading] = useState(true)
@@ -9,7 +10,8 @@ function StudentJobs() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [activeTab, setActiveTab] = useState('jobs')
-
+  const [selectedJob, setSelectedJob] = useState(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
   const { user } = useSelector((state) => state.auth)
 
   useEffect(() => {
@@ -99,7 +101,7 @@ function StudentJobs() {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-800 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-700/85 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading jobs...</p>
         </div>
       </div>
@@ -109,7 +111,7 @@ function StudentJobs() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto p-6">
-        <h1 className="text-3xl font-bold text-amber-800 mb-8">Job Portal</h1>
+        <h1 className="text-3xl font-bold text-cyan-700/85border-cyan-700/85 mb-8">Job Portal</h1>
 
         {/* Tab Navigation */}
         <div className="flex border-b border-gray-200 mb-6">
@@ -117,34 +119,36 @@ function StudentJobs() {
             onClick={() => setActiveTab('jobs')}
             className={`px-6 py-3 font-medium ${
               activeTab === 'jobs'
-                ? 'border-b-2 border-amber-800 text-amber-800'
-                : 'text-gray-600 hover:text-amber-800'
+                ? 'border-b-2 border-cyan-700/85 text-cyan-700/85border-cyan-700/85'
+                : 'text-gray-600 hover:text-cyan-700/85border-cyan-700/85'
             }`}
           >
             Available Jobs
           </button>
-          <button
-            onClick={() => setActiveTab('applications')}
-            className={`px-6 py-3 font-medium ${
-              activeTab === 'applications'
-                ? 'border-b-2 border-amber-800 text-amber-800'
-                : 'text-gray-600 hover:text-amber-800'
-            }`}
-          >
-            My Applications
-          </button>
+          {role === 'student' && (
+            <button
+              onClick={() => setActiveTab('applications')}
+              className={`px-6 py-3 font-medium ${
+                activeTab === 'applications'
+                  ? 'border-b-2 border-cyan-700/85 text-cyan-700/85border-cyan-700/85'
+                  : 'text-gray-600 hover:text-cyan-700/85border-cyan-700/85'
+              }`}
+            >
+              My Applications
+            </button>
+          )}
         </div>
 
         {/* Error/Success Messages */}
         {error && (
           <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-red-800">{error}</p>
+            <p className="text-red-700/85border-cyan-700/85">{error}</p>
           </div>
         )}
 
         {success && (
           <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-            <p className="text-green-800">{success}</p>
+            <p className="text-green-700/85border-cyan-700/85">{success}</p>
           </div>
         )}
 
@@ -152,10 +156,17 @@ function StudentJobs() {
         {activeTab === 'jobs' && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {jobs.map((job) => (
-              <div key={job._id} className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+              <div
+                key={job._id}
+                className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow cursor-pointer"
+                onClick={() => {
+                  setSelectedJob(job)
+                  setIsModalOpen(true)
+                }}
+              >
                 <div className="mb-4">
-                  <h3 className="text-xl font-semibold text-gray-800 mb-2">{job.title}</h3>
-                  <p className="text-amber-600 font-medium">{job.companyId.name}</p>
+                  <h3 className="text-xl font-semibold text-gray-700/85border-cyan-700/85 mb-2">{job.title}</h3>
+                  <p className="text-cyan-600 font-medium">{job.companyId.name}</p>
                   <p className="text-gray-500 text-sm">{job.companyId.location}</p>
                 </div>
 
@@ -180,9 +191,9 @@ function StudentJobs() {
                 <div className="flex justify-between items-center">
                   {isApplied(job._id) ? (
                     <span className={`px-3 py-1 rounded text-sm font-medium ${
-                      getApplicationStatus(job._id) === 'accepted' ? 'bg-green-100 text-green-800' :
-                      getApplicationStatus(job._id) === 'rejected' ? 'bg-red-100 text-red-800' :
-                      'bg-blue-100 text-blue-800'
+                      getApplicationStatus(job._id) === 'accepted' ? 'bg-green-100 text-green-700/85border-cyan-700/85' :
+                      getApplicationStatus(job._id) === 'rejected' ? 'bg-red-100 text-red-700/85border-cyan-700/85' :
+                      'bg-blue-100 text-blue-700/85border-cyan-700/85'
                     }`}>
                       {getApplicationStatus(job._id) === 'accepted' ? 'Accepted' :
                        getApplicationStatus(job._id) === 'rejected' ? 'Rejected' :
@@ -190,9 +201,12 @@ function StudentJobs() {
                     </span>
                   ) : (
                     <button
-                      onClick={() => applyForJob(job._id)}
+                      onClick={(e) => {
+                        e.stopPropagation() // Prevent modal from opening
+                        applyForJob(job._id)
+                      }}
                       disabled={applying === job._id}
-                      className="bg-amber-600 text-white px-4 py-2 rounded hover:bg-amber-700 disabled:opacity-50 text-sm font-medium"
+                      className="bg-cyan-600 text-white px-4 py-2 rounded hover:bg-cyan-700 disabled:opacity-50 text-sm font-medium"
                     >
                       {applying === job._id ? 'Applying...' : 'Apply Now'}
                     </button>
@@ -210,7 +224,7 @@ function StudentJobs() {
         )}
 
         {/* Applications Tab */}
-        {activeTab === 'applications' && (
+        {activeTab === 'applications' && role === 'student' && (
           <div className="bg-white rounded-lg shadow-md">
             <div className="p-6">
               <h2 className="text-xl font-semibold mb-4">My Applications</h2>
@@ -221,16 +235,16 @@ function StudentJobs() {
                     <div key={application._id} className="border border-gray-200 rounded-lg p-4">
                       <div className="flex justify-between items-start">
                         <div>
-                          <h3 className="font-semibold text-gray-800">{application.jobId.title}</h3>
-                          <p className="text-amber-600">{application.companyId.name}</p>
+                          <h3 className="font-semibold text-gray-700/85border-cyan-700/85">{application.jobId.title}</h3>
+                          <p className="text-cyan-600">{application.companyId.name}</p>
                           <p className="text-gray-500 text-sm">{application.companyId.location}</p>
                           <p className="text-gray-600 text-sm mt-1">{application.jobId.description}</p>
                         </div>
                         <div className="text-right">
                           <span className={`px-3 py-1 rounded text-sm font-medium ${
-                            application.status === 'accepted' ? 'bg-green-100 text-green-800' :
-                            application.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                            'bg-blue-100 text-blue-800'
+                            application.status === 'accepted' ? 'bg-green-100 text-green-700/85border-cyan-700/85' :
+                            application.status === 'rejected' ? 'bg-red-100 text-red-700/85border-cyan-700/85' :
+                            'bg-blue-100 text-blue-700/85border-cyan-700/85'
                           }`}>
                             {application.status.charAt(0).toUpperCase() + application.status.slice(1)}
                           </span>
@@ -250,6 +264,21 @@ function StudentJobs() {
             </div>
           </div>
         )}
+
+        {/* Job Detail Modal */}
+        <JobDetailModal
+          job={selectedJob}
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false)
+            setSelectedJob(null)
+          }}
+          onApply={applyForJob}
+          applying={applying}
+          isApplied={selectedJob ? isApplied(selectedJob._id) : false}
+          applicationStatus={selectedJob ? getApplicationStatus(selectedJob._id) : null}
+          role={role}
+        />
       </div>
     </div>
   )

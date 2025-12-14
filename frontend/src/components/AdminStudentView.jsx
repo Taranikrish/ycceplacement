@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import AdminSidebar from './AdminSidebar.jsx'
+import CompanySidebar from './CompanySidebar.jsx'
 
-function AdminStudentView() {
+function AdminStudentView({role}) {
   const { studentId } = useParams()
   const [studentProfile, setStudentProfile] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -37,10 +38,10 @@ function AdminStudentView() {
   if (loading) {
     return (
       <div className="flex h-screen">
-        <AdminSidebar />
+       {role === 'admin'?<AdminSidebar />:<CompanySidebar />}
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-800 mx-auto"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-700/85 mx-auto"></div>
             <p className="mt-4 text-gray-600">Loading student profile...</p>
           </div>
         </div>
@@ -51,7 +52,7 @@ function AdminStudentView() {
   if (error) {
     return (
       <div className="flex h-screen">
-        <AdminSidebar />
+       {role === 'admin'?<AdminSidebar />:<CompanySidebar />}
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <h2 className="text-xl font-bold text-red-600 mb-4">Error</h2>
@@ -64,19 +65,26 @@ function AdminStudentView() {
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      <AdminSidebar />
+      {role === 'admin'?<AdminSidebar />:<CompanySidebar />}
       <div className="flex-1 p-6 md:ml-0 ml-0">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-3xl font-bold text-gray-900 mb-8">Student Profile</h1>
 
           {studentProfile && (
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-2xl font-semibold mb-6 text-gray-800">Student Details</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Name</label>
-                  <p className="mt-1 text-lg text-gray-900">{studentProfile.name}</p>
+            <div className="bg-white rounded-lg  shadow-md p-6">
+              {studentProfile.profilePhoto && (
+                <div className="flex flex-col gap-2 justify-center items-center mb-6">
+                  <img
+                    src={studentProfile.profilePhoto}
+                    alt="Profile Photo"
+                    className="w-32 h-32 object-cover rounded-full"
+                  />
+                     <p className="mt-1 text-lg text-gray-900">{studentProfile.name}</p>
+
                 </div>
+              )}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+               
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Email</label>
                   <p className="mt-1 text-lg text-gray-900">{studentProfile.email}</p>
@@ -102,6 +110,11 @@ function AdminStudentView() {
                   <p className={`mt-1 text-lg ${studentProfile.isregistered ? 'text-green-600' : 'text-red-600'}`}>
                     {studentProfile.isregistered ? 'Registered' : 'Not Registered'}
                   </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Resume Detail</label>
+                  <a href={studentProfile.resumePdf} target="_blank" rel="noopener noreferrer" className='text-cyan-300 underline' >Resume Pdf</a>
+                  <a href={studentProfile.resumeVideo} target='_blank' rel='noopener noreferrer' className='text-cyan-300 underline mx-8'>Resume Video</a>
                 </div>
               </div>
 
@@ -131,6 +144,7 @@ function AdminStudentView() {
                   </div>
                 </div>
               )}
+              
 
               {!studentProfile.isregistered && (
                 <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">

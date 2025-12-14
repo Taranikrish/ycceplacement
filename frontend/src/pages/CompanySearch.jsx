@@ -131,7 +131,7 @@ function CompanySearch() {
           <div className="flex gap-4 items-center">
             <button
               onClick={fetchAllCompanies}
-              className="bg-amber-800 text-white px-4 py-2 rounded hover:bg-amber-700"
+              className="bg-cyan-700/85 text-white px-4 py-2 rounded hover:bg-cyan-700"
             >
               Get All Companies
             </button>

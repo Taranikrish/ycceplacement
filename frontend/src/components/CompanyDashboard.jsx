@@ -16,15 +16,19 @@ function CompanyDashboard() {
     requirements: '',
     salary: '',
     location: '',
-    deadline: ''
+    deadline: '',
+    jdFile: null
   })
   const [activeTab, setActiveTab] = useState('profile')
   const [editForm, setEditForm] = useState({
     phoneNumber: '',
     location: '',
-    contactPerson: ''
+    contactPerson: '',
+    linkedInUrl: '',
+    dpiitNumber: ''
   })
   const [saving, setSaving] = useState(false)
+  const [submitting, setSubmitting] = useState(false) // for job posting
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const navigate = useNavigate()
@@ -35,24 +39,29 @@ function CompanyDashboard() {
   useEffect(() => {
     const fetchCompanyData = async () => {
       try {
-        const auth = JSON.parse(localStorage.getItem('auth'))
         // Fetch company profile
         const profileUrl = isAdminView
           ? `${import.meta.env.VITE_API_BASE_URL}/api/company/profile/${companyId}`
           : `${import.meta.env.VITE_API_BASE_URL}/api/company/profile`
+
         const profileResponse = await fetch(profileUrl, {
           credentials: 'include',
           headers: {
             'Content-Type': 'application/json',
           },
         })
+
         if (profileResponse.ok) {
           const profileData = await profileResponse.json()
-          setCompany(profileData)
+          // profileData may be object or wrapped, adapt if your API returns { company: {...} }
+          const profile = profileData.company || profileData
+          setCompany(profile)
           setEditForm({
-            phoneNumber: profileData.phoneNumber || '',
-            location: profileData.location || '',
-            contactPerson: profileData.contactPerson || ''
+            phoneNumber: profile.phoneNumber || '',
+            location: profile.location || '',
+            contactPerson: profile.contactPerson || '',
+            linkedInUrl: profile.linkedInUrl || '',
+            dpiitNumber: profile.dpiitNumber || ''
           })
         }
 
@@ -82,22 +91,116 @@ function CompanyDashboard() {
             setApplications(appsData)
           }
         }
-      } catch (error) {
-        console.error('Error fetching company data:', error)
+      } catch (err) {
+        console.error('Error fetching company data:', err)
+        setError('Failed to load company data')
+        setTimeout(() => setError(''), 4000)
       }
     }
 
     fetchCompanyData()
   }, [companyId, isAdminView])
 
-  const handleJobSubmit = (e) => {
+  // file change handler for JD PDF
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0] ?? null
+    if (!file) {
+      setJobData((s) => ({ ...s, jdFile: null }))
+      return
+    }
+
+    // basic client-side validation
+    const allowedTypes = ['application/pdf']
+    const maxSize = 10 * 1024 * 1024 // 10 MB
+
+    if (!allowedTypes.includes(file.type)) {
+      setError('Only PDF files are allowed for JD.')
+      setTimeout(() => setError(''), 4000)
+      return
+    }
+    if (file.size > maxSize) {
+      setError('JD file must be under 10MB.')
+      setTimeout(() => setError(''), 4000)
+      return
+    }
+
+    setError('')
+    setJobData((s) => ({ ...s, jdFile: file }))
+  }
+
+  // Submit job (uploads JD if provided)
+  const handleJobSubmit = async (e) => {
     e.preventDefault()
-    // Navigate to jobs page with job data
-    navigate('/company/jobs', { state: { job: jobData, company: company } })
+    setSubmitting(true)
+    setError('')
+    setSuccess('')
+
+    try {
+      const formData = new FormData()
+      formData.append('title', jobData.title)
+      formData.append('description', jobData.description)
+      formData.append('requirements', jobData.requirements || '')
+      formData.append('salary', jobData.salary || '')
+      formData.append('location', jobData.location || '')
+      if (jobData.deadline) formData.append('deadline', jobData.deadline)
+
+      // Attach JD file using the field name expected by backend (uploadJdFile.single('jd_file'))
+      if (jobData.jdFile) {
+      // file is the File object from <input type="file" />
+      formData.append('jd_file', jobData.jdFile, jobData.jdFile.name);
+      }
+
+      // If admin creating on behalf of a company (only if your backend allows it)
+      if (isAdminView && companyId) {
+        formData.append('companyId', companyId)
+      }
+
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/company/jobs`, {
+        method: 'POST',
+        credentials: 'include',
+        // DO NOT set Content-Type header — browser will set multipart boundary
+        body: formData,
+      })
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.message || 'Failed to create job')
+      }
+
+      const createdJob = await res.json()
+
+      // Add job to local state so UI updates without refetch
+      setJobs((prev) => [createdJob, ...prev])
+
+      // Clear form
+      setJobData({
+        title: '',
+        description: '',
+        requirements: '',
+        salary: '',
+        location: '',
+        deadline: '',
+        jdFile: null
+      })
+
+      setShowJobForm(false)
+      setSuccess('Job posted successfully!')
+      setTimeout(() => setSuccess(''), 3000)
+    } catch (err) {
+      console.error('Error creating job:', err)
+      setError(err.message || 'Error creating job')
+      setTimeout(() => setError(''), 4000)
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const handleJobClick = (job) => {
-    setSelectedJob(job)
+    if (selectedJob && selectedJob._id === job._id) {
+      setSelectedJob(null)
+    } else {
+      setSelectedJob(job)
+    }
   }
 
   const handleEditSubmit = async (e) => {
@@ -118,16 +221,20 @@ function CompanyDashboard() {
 
       if (response.ok) {
         const data = await response.json()
-        setCompany(data.company)
+        const updatedCompany = data.company || data
+        setCompany(updatedCompany)
         setSuccess('Profile updated successfully!')
         setActiveTab('profile')
+        setTimeout(() => setSuccess(''), 3000)
       } else {
-        const errorData = await response.json()
+        const errorData = await response.json().catch(() => ({}))
         setError(errorData.message || 'Failed to update profile')
+        setTimeout(() => setError(''), 4000)
       }
-    } catch (error) {
-      console.error('Error updating profile:', error)
+    } catch (err) {
+      console.error('Error updating profile:', err)
       setError('Error updating profile')
+      setTimeout(() => setError(''), 4000)
     } finally {
       setSaving(false)
     }
@@ -152,12 +259,14 @@ function CompanyDashboard() {
         localStorage.removeItem('auth')
         navigate('/Signin/company')
       } else {
-        const errorData = await response.json()
+        const errorData = await response.json().catch(() => ({}))
         setError(errorData.message || 'Failed to delete account')
+        setTimeout(() => setError(''), 3000)
       }
-    } catch (error) {
-      console.error('Error deleting account:', error)
+    } catch (err) {
+      console.error('Error deleting account:', err)
       setError('Error deleting account')
+      setTimeout(() => setError(''), 3000)
     }
   }
 
@@ -177,7 +286,7 @@ function CompanyDashboard() {
 
       if (response.ok) {
         // Remove the job from the local state
-        setJobs(jobs.filter(job => job._id !== jobId))
+        setJobs((prev) => prev.filter(job => job._id !== jobId))
         // Clear selected job if it was the deleted one
         if (selectedJob && selectedJob._id === jobId) {
           setSelectedJob(null)
@@ -185,12 +294,12 @@ function CompanyDashboard() {
         setSuccess('Job deleted successfully!')
         setTimeout(() => setSuccess(''), 3000)
       } else {
-        const errorData = await response.json()
+        const errorData = await response.json().catch(() => ({}))
         setError(errorData.message || 'Failed to delete job')
         setTimeout(() => setError(''), 3000)
       }
-    } catch (error) {
-      console.error('Error deleting job:', error)
+    } catch (err) {
+      console.error('Error deleting job:', err)
       setError('Error deleting job')
       setTimeout(() => setError(''), 3000)
     }
@@ -221,8 +330,30 @@ function CompanyDashboard() {
                 type="text"
                 value={editForm.phoneNumber}
                 onChange={(e) => setEditForm({...editForm, phoneNumber: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500"
                 placeholder="Enter phone number"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">LinkedIn Url</label>
+              <input
+                type="text"
+                value={editForm.linkedInUrl}
+                onChange={(e) => setEditForm({...editForm, linkedInUrl: e.target.value})}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                placeholder="Enter linkedInUrl"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">DPIIT Number</label>
+              <input
+                type="text"
+                value={editForm.dpiitNumber}
+                onChange={(e) => setEditForm({...editForm, dpiitNumber: e.target.value})}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                placeholder="Enter DPIIT Number"
               />
             </div>
 
@@ -232,7 +363,7 @@ function CompanyDashboard() {
                 type="text"
                 value={editForm.location}
                 onChange={(e) => setEditForm({...editForm, location: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500"
                 placeholder="Enter location"
               />
             </div>
@@ -243,7 +374,7 @@ function CompanyDashboard() {
                 type="text"
                 value={editForm.contactPerson}
                 onChange={(e) => setEditForm({...editForm, contactPerson: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500"
                 placeholder="Enter contact person name"
               />
             </div>
@@ -252,7 +383,7 @@ function CompanyDashboard() {
               <button
                 type="submit"
                 disabled={saving}
-                className="bg-amber-800 text-white px-6 py-2 rounded hover:bg-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50"
+                className="bg-cyan-800 text-white px-6 py-2 rounded hover:bg-cyan-900 focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:opacity-50"
               >
                 {saving ? 'Saving...' : 'Save Changes'}
               </button>
@@ -270,30 +401,121 @@ function CompanyDashboard() {
     } else if (location.hash === '#jobs') {
       return (
         <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-2xl font-semibold mb-4">Jobs Created</h2>
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-semibold">Jobs Created</h2>
+            <div className="text-sm text-gray-600">
+              Total Jobs: <span className="font-semibold text-cyan-600">{jobs.length}</span>
+            </div>
+          </div>
+
           {jobs.length > 0 ? (
             <div className="space-y-4">
               {jobs.map((job) => (
-                <div key={job._id} className="border rounded-lg p-4 hover:bg-gray-50">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1 cursor-pointer" onClick={() => handleJobClick(job)}>
-                      <h3 className="text-lg font-medium">{job.title}</h3>
-                      <p className="text-gray-600">{job.description}</p>
-                      <p className="text-sm text-gray-500">Created: {new Date(job.createdAt).toLocaleDateString()}</p>
-                      <p className="text-sm text-gray-500">Deadline: {job.deadline ? new Date(job.deadline).toLocaleDateString() : 'No deadline'}</p>
+                <div key={job._id} className="border rounded-lg p-6 hover:shadow-md transition-shadow">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="flex-1">
+                      <div className="flex items-start justify-between mb-2">
+                        <h3 className="text-xl font-semibold text-gray-900">{job.title}</h3>
+                        <div className="flex items-center gap-2">
+                          {job.jd_file && (
+                            <a
+                              href={job.jd_file}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-full hover:bg-blue-200 transition-colors"
+                            >
+                              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              </svg>
+                              View JD
+                            </a>
+                          )}
+                          <button
+                            onClick={() => handleDeleteJob(job._id)}
+                            className="inline-flex items-center px-3 py-1 text-sm bg-red-100 text-red-700 rounded-full hover:bg-red-200 transition-colors"
+                          >
+                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+
+                      <p className="text-gray-600 mb-3 line-clamp-2">{job.description}</p>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
+                        <div className="flex items-center text-sm text-gray-500">
+                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                          </svg>
+                          Salary: {job.salary ? `₹${job.salary}` : 'Not specified'}
+                        </div>
+                       
+                        <div className="flex items-center text-sm text-gray-500">
+                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          Deadline: {job.deadline ? new Date(job.deadline).toLocaleDateString() : 'No deadline'}
+                        </div>
+                      </div>
+
+                      {job.location && (
+                        <div className="flex items-center text-sm text-gray-500 mb-3">
+                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                          Location: {job.location}
+                        </div>
+                      )}
+
+                      {job.requirements && Array.isArray(job.requirements) && job.requirements.length > 0 && (
+                        <div className="mb-3">
+                          <span className="text-sm font-medium text-gray-700 mr-2">Requirements:</span>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {job.requirements.slice(0, 4).map((req, index) => (
+                              <span key={index} className="inline-block bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs">
+                                {req}
+                              </span>
+                            ))}
+                            {job.requirements.length > 4 && (
+                              <span className="inline-block bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs">
+                                +{job.requirements.length - 4} more
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
+                  </div>
+
+                  <div className="flex justify-between items-center pt-4 border-t">
                     <button
-                      onClick={() => handleDeleteJob(job._id)}
-                      className="ml-4 bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 text-sm"
+                      onClick={() => handleJobClick(job)}
+                      className="text-cyan-600 hover:text-cyan-700 font-medium text-sm flex items-center"
                     >
-                      Delete
+                      <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                      {!selectedJob?'view Details':'hide Details'}
                     </button>
+                    <div className="text-xs text-gray-400">
+                      ID: {job._id.slice(-6)}
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-gray-500 text-center py-8">No jobs created yet.</p>
+            <div className="text-center py-12">
+              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+              </svg>
+              <h3 className="mt-2 text-sm font-medium text-gray-900">No jobs created</h3>
+              <p className="mt-1 text-sm text-gray-500">Get started by creating your first job posting.</p>
+            </div>
           )}
 
           {selectedJob && (
@@ -309,12 +531,32 @@ function CompanyDashboard() {
                   <p className="mt-1 text-lg">{selectedJob.salary}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Deadline</label>
-                  <p className="mt-1 text-lg">{selectedJob.deadline}</p>
-                </div>
-                <div>
                   <label className="block text-sm font-medium text-gray-700">Created Date</label>
-                  <p className="mt-1 text-lg">{selectedJob.createdDate}</p>
+                  <p className="mt-1 text-lg">
+                    {new Date(selectedJob.deadline).toLocaleString('en-IN', {
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric',
+                      hour: 'numeric',
+                      minute: '2-digit',
+                      hour12: true,
+                      timeZone: 'Asia/Kolkata'
+                    })}
+                  </p>
+                </div>
+               <div>
+                  <label className="block text-sm font-medium text-gray-700">Created Date</label>
+                  <p className="mt-1 text-lg">
+                    {new Date(selectedJob.createdDate).toLocaleString('en-IN', {
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric',
+                      hour: 'numeric',
+                      minute: '2-digit',
+                      hour12: true,
+                      timeZone: 'Asia/Kolkata'
+                    })}
+                  </p>
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700">Description</label>
@@ -342,6 +584,7 @@ function CompanyDashboard() {
           {showJobForm && (
             <div className="mt-6 border-t pt-6">
               <h3 className="text-lg font-medium mb-4">Create Job Posting</h3>
+              {error && <div className="mb-3 text-sm text-red-600">{error}</div>}
               <form onSubmit={handleJobSubmit} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Job Title</label>
@@ -354,6 +597,7 @@ function CompanyDashboard() {
                     placeholder="e.g., Software Engineer"
                   />
                 </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Description</label>
                   <textarea
@@ -365,6 +609,7 @@ function CompanyDashboard() {
                     placeholder="Job description..."
                   />
                 </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Requirements</label>
                   <textarea
@@ -376,6 +621,7 @@ function CompanyDashboard() {
                     placeholder="Required skills, experience..."
                   />
                 </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Salary Range</label>
@@ -387,6 +633,7 @@ function CompanyDashboard() {
                       placeholder="e.g., 5-8 LPA"
                     />
                   </div>
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Location</label>
                     <input
@@ -399,6 +646,19 @@ function CompanyDashboard() {
                   </div>
 
                   <div>
+                    <label className="block text-sm font-medium text-gray-700">JD (PDF)</label>
+                    <input
+                      type="file"
+                      accept="application/pdf"
+                      onChange={handleFileChange}
+                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                    />
+                    {jobData.jdFile && (
+                      <p className="mt-2 text-sm text-gray-600">Selected file: {jobData.jdFile.name}</p>
+                    )}
+                  </div>
+
+                  <div>
                     <label className="block text-sm font-medium text-gray-700">Application Deadline</label>
                     <input
                       type="date"
@@ -408,13 +668,16 @@ function CompanyDashboard() {
                     />
                   </div>
                 </div>
+
                 <div className="flex gap-4">
                   <button
                     type="submit"
-                    className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700"
+                    disabled={submitting}
+                    className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 disabled:opacity-60"
                   >
-                    Post Job
+                    {submitting ? 'Posting...' : 'Post Job'}
                   </button>
+
                   <button
                     type="button"
                     onClick={() => setShowJobForm(false)}
@@ -456,7 +719,7 @@ function CompanyDashboard() {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {applications.map((application, index) => (
-                    <tr key={index} className="hover:bg-gray-50 cursor-pointer" onClick={() => window.location.href = `/student/dashboard?studentId=${application.studentId._id}`}>
+                    <tr key={index} className="hover:bg-gray-50 cursor-pointer" onClick={() => window.location.href = `/company/dashboard/applications/${application.studentId._id}`}>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                         {application.studentId.name}
                       </td>
@@ -485,7 +748,7 @@ function CompanyDashboard() {
     } else {
       // Default Profile view
       return (
-        <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="bg-white w-3/4 rounded-lg shadow-md p-6">
           <h2 className="text-2xl font-semibold mb-4">Company Profile</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
@@ -503,6 +766,18 @@ function CompanyDashboard() {
             <div>
               <label className="block text-sm font-medium text-gray-700">Location</label>
               <p className="mt-1 text-lg">{company.location || 'Not provided'}</p>
+            </div>
+            {/* linkedIn */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700">LinkedIn </label>
+              <a href={company.linkedInUrl} target="_blank" rel="noopener noreferrer" className='text-cyan-700/85 underline' >
+                {company.linkedInUrl ? 'LinkedIn Profile' : 'Not provided'}
+              </a>
+            </div>
+            {/* dpiitNumber */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700">DPIIT Number</label>
+              <p className="mt-1 text-lg">{company.dpiitNumber || 'Not provided'}</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Contact Person</label>
@@ -523,7 +798,7 @@ function CompanyDashboard() {
           <div className="mt-6 flex gap-4">
             <button
               onClick={() => setActiveTab('edit')}
-              className="bg-amber-800 text-white px-6 py-2 rounded hover:bg-amber-900"
+              className="bg-cyan-700/85 text-white px-6 py-2 rounded hover:bg-cyan-900"
             >
               Edit Profile
             </button>

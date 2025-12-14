@@ -39,7 +39,53 @@ const student = new mongoose.Schema({
     isregistered:{
         type:Boolean,
         default:false
-    }
+    },
+    profilePhoto: {
+    type: String,
+    default: null,
+  },
+  profilePhotoPublicId: {
+    type: String,
+    default: null,
+  },
+  resumePdf: {
+    type: String,
+    default: null,
+  },
+  resumePdfPublicId: {
+    type: String,
+    default: null,
+  },
+  resumeVideo: {
+    type: String,
+    default: null,
+  },
+    resumeVideoPublicId: {
+        type: String,
+        default: null,
+    },
+    address: {
+        type: String,
+        default: '',
+        lowercase: true,
+        trim:true
+    },
+    city: {
+        type: String,
+        default: '',
+        lowercase: true,
+        trim: true
+    },
+    state: {
+        type: String,
+        default: '',
+        lowercase: true,
+        trim: true
+    },
+    pin: {
+        type: String,
+        default: '',
+    },
 },{timestamps:true,});
 
 const Student = mongoose.model('Student',student);

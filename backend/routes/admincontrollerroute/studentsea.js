@@ -4,7 +4,7 @@ const Student = require('../../models/student');
 const { requireAuth, requireRole } = require('../../middleware/auth');
 
 // Get all students
-router.get('/', requireAuth, requireRole('admin'), async (req, res) => {
+router.get('/', requireAuth, requireRole(['admin', 'company']), async (req, res) => {
   try {
     const students = await Student.find({});
     res.json(students);
