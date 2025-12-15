@@ -77,7 +77,7 @@ const uploadJD = async (req, res) => {
 
 const createJob = async (req, res) => {
   try {
-    const { title, description, requirements, salary, location, deadline } = req.body;
+    const { title, description, requirements, salary, location, deadline, branch } = req.body;
     if (!title || !description) return res.status(400).json({ message: 'Missing job title or description' });
 
     const companyId = req.user && req.user._id;
@@ -94,6 +94,7 @@ const createJob = async (req, res) => {
       salary,
       location,
       deadline,
+      branch,
     };
 
     if (req.file && req.file.buffer) {

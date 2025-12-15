@@ -793,5 +793,4 @@ function StudentDetail() {
     </div>
   )
 }
-
-export default StudentDetail
+export default StudentDetail;

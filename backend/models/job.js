@@ -24,6 +24,9 @@ const jobSchema = new mongoose.Schema({
   location: {
     type: String,
   },
+   branch: {           // <-- added branch
+    type: String,
+  },
   deadline: {
     type: Date,
   },

@@ -33,6 +33,15 @@ function CompanyDashboard() {
   const [success, setSuccess] = useState('')
   const navigate = useNavigate()
   const location = useLocation()
+// Define branches array
+const branches = [
+  'Computer Science & Engineering',
+  'Information Technology',
+  'Electronics & Telecommunication',
+  'Mechanical Engineering',
+  'Civil Engineering',
+  'Electrical Engineering'
+];
 
   const isAdminView = companyId && JSON.parse(localStorage.getItem('auth'))?.role === 'admin'
 
@@ -97,7 +106,6 @@ function CompanyDashboard() {
         setTimeout(() => setError(''), 4000)
       }
     }
-
     fetchCompanyData()
   }, [companyId, isAdminView])
 
@@ -143,6 +151,7 @@ function CompanyDashboard() {
       formData.append('salary', jobData.salary || '')
       formData.append('location', jobData.location || '')
       if (jobData.deadline) formData.append('deadline', jobData.deadline)
+    if (jobData.branch) formData.append('branch', jobData.branch) // add branch here
 
       // Attach JD file using the field name expected by backend (uploadJdFile.single('jd_file'))
       if (jobData.jdFile) {
@@ -180,6 +189,7 @@ function CompanyDashboard() {
         salary: '',
         location: '',
         deadline: '',
+        branch: '',
         jdFile: null
       })
 
@@ -305,7 +315,7 @@ function CompanyDashboard() {
     }
   }
 
-  const renderContent = () => {
+const renderContent = () => {
     if (activeTab === 'edit') {
       return (
         <div className="bg-white rounded-lg shadow-md p-6">
@@ -444,31 +454,39 @@ function CompanyDashboard() {
 
                       <p className="text-gray-600 mb-3 line-clamp-2">{job.description}</p>
 
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-3">
+                        {/* ⚠️ Added Branch Field to Job Listing */}
+                        <div className="flex items-center text-sm text-gray-500">
+                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                          </svg>
+                          Branch: {job.branch || 'Any'}
+                        </div>
+                        
                         <div className="flex items-center text-sm text-gray-500">
                           <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
                           </svg>
                           Salary: {job.salary ? `₹${job.salary}` : 'Not specified'}
                         </div>
-                       
+                        
                         <div className="flex items-center text-sm text-gray-500">
                           <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
                           Deadline: {job.deadline ? new Date(job.deadline).toLocaleDateString() : 'No deadline'}
                         </div>
-                      </div>
 
-                      {job.location && (
-                        <div className="flex items-center text-sm text-gray-500 mb-3">
-                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                          </svg>
-                          Location: {job.location}
-                        </div>
-                      )}
+                        {job.location && (
+                          <div className="flex items-center text-sm text-gray-500">
+                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            Location: {job.location}
+                          </div>
+                        )}
+                      </div>
 
                       {job.requirements && Array.isArray(job.requirements) && job.requirements.length > 0 && (
                         <div className="mb-3">
@@ -499,7 +517,7 @@ function CompanyDashboard() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                       </svg>
-                      {!selectedJob?'view Details':'hide Details'}
+                      {selectedJob && selectedJob._id === job._id ? 'Hide Details' : 'View Details'}
                     </button>
                     <div className="text-xs text-gray-400">
                       ID: {job._id.slice(-6)}
@@ -530,21 +548,24 @@ function CompanyDashboard() {
                   <label className="block text-sm font-medium text-gray-700">Salary Range</label>
                   <p className="mt-1 text-lg">{selectedJob.salary}</p>
                 </div>
+                {/* ⚠️ Added Branch Field to Job Details */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Created Date</label>
+                  <label className="block text-sm font-medium text-gray-700">Eligible Branch</label>
+                  <p className="mt-1 text-lg">{selectedJob.branch || 'Any'}</p>
+                </div>
+                {/* ⚠️ Corrected Date Field (Previously duplicate 'Created Date') */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Application Deadline</label>
                   <p className="mt-1 text-lg">
-                    {new Date(selectedJob.deadline).toLocaleString('en-IN', {
+                    {selectedJob.deadline ? new Date(selectedJob.deadline).toLocaleString('en-IN', {
                       day: 'numeric',
                       month: 'short',
                       year: 'numeric',
-                      hour: 'numeric',
-                      minute: '2-digit',
-                      hour12: true,
-                      timeZone: 'Asia/Kolkata'
-                    })}
+                      timeZone: 'Asia/Kolkata' // Omitted time for deadline clarity
+                    }) : 'No deadline'}
                   </p>
                 </div>
-               <div>
+                <div>
                   <label className="block text-sm font-medium text-gray-700">Created Date</label>
                   <p className="mt-1 text-lg">
                     {new Date(selectedJob.createdDate).toLocaleString('en-IN', {
@@ -564,12 +585,14 @@ function CompanyDashboard() {
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700">Requirements</label>
-                  <p className="mt-1">{selectedJob.requirements}</p>
+                  {/* Assuming requirements is a string or array that needs formatting */}
+                  <p className="mt-1">{Array.isArray(selectedJob.requirements) ? selectedJob.requirements.join(', ') : selectedJob.requirements}</p>
                 </div>
               </div>
             </div>
           )}
 
+          {/* ... Create New Job Form is retained and correct for branch input ... */}
           {company?.verified && (
             <div className="mt-6">
               <button
@@ -586,6 +609,7 @@ function CompanyDashboard() {
               <h3 className="text-lg font-medium mb-4">Create Job Posting</h3>
               {error && <div className="mb-3 text-sm text-red-600">{error}</div>}
               <form onSubmit={handleJobSubmit} className="space-y-4">
+                {/* ... existing job form fields ... */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Job Title</label>
                   <input
@@ -620,6 +644,22 @@ function CompanyDashboard() {
                     rows="3"
                     placeholder="Required skills, experience..."
                   />
+                </div>
+
+                {/* Branch Input - Already exists and is correct */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Eligible Branch</label>
+                  <select
+                    value={jobData.branch || ''}
+                    onChange={(e) => setJobData({ ...jobData, branch: e.target.value })}
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-white focus:ring-cyan-500 focus:border-cyan-500"
+                  >
+                    <option value="" disabled>Select a branch</option>
+                    {branches.map((branch, index) => (
+                      <option key={index} value={branch}>{branch}</option>
+                    ))}
+                  </select>
+                  <p className="text-sm text-gray-500 mt-1">Select the eligible branch for this job.</p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -730,7 +770,7 @@ function CompanyDashboard() {
                         {application.studentId.branch || 'Not specified'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {application.studentId.cgpa ? application.studentId.cgpa.toFixed(2) : 'Not calculated'}
+                        {application.studentId.cgpa ? application.studentId.cgpa.toFixed(2) : 'N/A'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {new Date(application.appliedDate).toLocaleDateString()}
@@ -813,7 +853,6 @@ function CompanyDashboard() {
       )
     }
   }
-
   if (!company) {
     return <div className="flex justify-center items-center h-screen">Loading...</div>
   }

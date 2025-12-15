@@ -39,7 +39,7 @@ const company = new mongoose.Schema({
     },
     dpiitNumber:{
       type:String,
-      required: true,  
+    //   required: true,  
     },
     isVerified: {
         type: Boolean,

@@ -32,6 +32,10 @@ function JobDetailModal({ job, isOpen, onClose, onApply, applying, isApplied, ap
                   <span className="ml-2">{job.salary ? `₹${job.salary}` : 'Not specified'}</span>
                 </div>
                 <div>
+                  <span className="font-medium text-gray-700">Branch:</span>
+                  <span className="ml-2">{job.branch ? job.branch : 'Not specified'}</span>
+                </div>
+                <div>
                   <span className="font-medium text-gray-700">Deadline:</span>
                   <span className="ml-2">{new Date(job.deadline).toLocaleDateString()}</span>
                 </div>

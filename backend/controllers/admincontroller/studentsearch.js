@@ -1,24 +1,42 @@
-
 const Student = require('../../models/student');
 
-const studentsearch = async (req, res) => {
-    try {
-        const query = req.query.q; // e.g. /api/students/search?q=s
-        if (!query?.trim()) return res.json([]);
+// SEARCH STUDENTS WITH FILTER + PAGINATION
+const searchStudents = async (req, res) => {
+  try {
+    const {
+      name,
+      rollNumber,
+      branch,
+      domain,
+      page = 1,
+      limit = 10
+    } = req.query;
 
-        // Case-insensitive partial match for name or emailId
-        const students = await Student.find({
-            $or: [
-                { name: { $regex: query, $options: 'i' } },
-                { emailId: { $regex: query, $options: 'i' } }
-            ]
-        }).limit(10); // Limit to 10 results
+    const query = {};
 
-        res.json(students);
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Server error' });
-    }
-}
+    if (name) query.name = { $regex: name, $options: 'i' };
+    if (rollNumber) query.rollNumber = { $regex: rollNumber, $options: 'i' };
+    if (branch) query.branch = branch;
+    if (domain) query.domain = { $in: [domain] };
 
-module.exports = studentsearch;
+    const skip = (page - 1) * limit;
+
+    const students = await Student.find(query)
+      .skip(Number(skip))
+      .limit(Number(limit));
+
+    const total = await Student.countDocuments(query);
+
+    res.json({
+      students,
+      totalPages: Math.ceil(total / limit),
+      currentPage: Number(page),
+      totalStudents: total
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+module.exports = { searchStudents };
