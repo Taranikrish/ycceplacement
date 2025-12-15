@@ -135,7 +135,7 @@ function StudentDetail() {
         const data = await response.json()
         setStudentProfile(data.student)
         setSuccess('Profile updated successfully!')
-        setActiveTab('profile')
+        
       } else {
         const errorData = await response.json()
         setError(errorData.message || 'Failed to update profile')
