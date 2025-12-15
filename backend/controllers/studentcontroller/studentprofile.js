@@ -65,7 +65,11 @@ const getStudentProfile = async (req, res) => {
       resumePdf: student.resumePdf || null,
       resumePdfPublicId: student.resumePdfPublicId || null,
       resumeVideo: student.resumeVideo || null,
-      resumeVideoPublicId: student.resumeVideoPublicId || null
+      resumeVideoPublicId: student.resumeVideoPublicId || null,
+      address: student.address || null,
+      city: student.city || null,
+      state: student.state || null,
+      pin: student.pin || null
     });
   } catch (err) {
     console.error(err);
@@ -134,7 +138,8 @@ const updateStudentProfile = async (req, res) => {
         address, // Add the address field here
         city,
         state,
-        pin
+        pin,
+        isregistered: true
       },
       { new: true }
     );

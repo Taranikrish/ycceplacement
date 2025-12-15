@@ -47,7 +47,8 @@ function StudentDetail() {
             if (response.ok) {
                 const data = await response.json()
                 setStudentProfile(data)
-                setFormData({
+                setFormData(prev=>({
+                    ...prev,
                     branch: data.branch || '',
                     mobileNumber: data.mobileNumber || '',
                     sgpa: data.sgpa || ['', '', '', '', '', ''],
@@ -56,7 +57,7 @@ function StudentDetail() {
                     city: data.city || '',
                     state: data.state || '',
                     pin: data.pin || ''
-                })
+                }))
             } else {
                 setError('Failed to fetch student profile')
             }
