@@ -131,7 +131,10 @@ const updateStudentProfile = async (req, res) => {
         cgpa,
         mobileNumber,
         domain,
-        isregistered: true
+        address, // Add the address field here
+        city,
+        state,
+        pin
       },
       { new: true }
     );
