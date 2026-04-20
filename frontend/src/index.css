@@ -1,0 +1,13 @@
+@import "tailwindcss";
+
+@layer components {
+  .form-input-formal {
+    @apply w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-800 transition-all outline-none;
+  }
+  .form-input-formal:focus {
+    @apply bg-white border-slate-900 ring-4 ring-slate-100;
+  }
+  .form-input-formal::placeholder {
+    @apply text-slate-300 font-medium italic;
+  }
+}
