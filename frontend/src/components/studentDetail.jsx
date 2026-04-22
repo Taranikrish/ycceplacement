@@ -337,6 +337,7 @@ function StudentDetail() {
                             icon={<Camera className="w-6 h-6 text-gray-600" />}
                             type="profile"
                             preview={profilePreview || studentProfile?.profilePhoto}
+                            hasFile={!!studentProfile?.profilePhoto}
                             onFileChange={handleFileChange}
                             onUpload={uploadFile}
                             onDelete={deleteFile}
@@ -350,6 +351,7 @@ function StudentDetail() {
                             type="resumePdf"
                             isPdf
                             preview={resumePdfPreview || studentProfile?.resumePdf}
+                            hasFile={!!studentProfile?.resumePdf}
                             onFileChange={handleFileChange}
                             onUpload={uploadFile}
                             onDelete={deleteFile}
@@ -361,6 +363,7 @@ function StudentDetail() {
                             icon={<Video className="w-6 h-6 text-gray-600" />}
                             type="resumeVideo"
                             preview={resumeVideoPreview || studentProfile?.resumeVideo}
+                            hasFile={!!studentProfile?.resumeVideo}
                             isVideo
                             onFileChange={handleFileChange}
                             onUpload={uploadFile}
@@ -420,64 +423,94 @@ const AddressInput = ({ label, name, val, handler }) => (
     </div>
 )
 
-const UploadCard = ({ title, icon, type, preview, isPdf, isVideo, onFileChange, onUpload, onDelete, uploading, message }) => (
-    <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col items-center">
-        <div className="flex items-center gap-2 mb-4 w-full justify-center">
-            {React.cloneElement(icon, { size: 16, className: "text-cyan-600" })}
-            <h3 className="font-black text-slate-900 text-sm uppercase tracking-tighter">{title}</h3>
-        </div>
-        
-        <div className="w-full aspect-square rounded-2xl bg-slate-50 border-2 border-dashed border-slate-200 mb-4 overflow-hidden flex items-center justify-center relative group">
-        {isPdf && preview ? (
-            <iframe
-                src={preview}
-                title="PDF Preview"
-                className="w-full h-full rounded-xl"
-            />
-        ) : isPdf ? (
-            <div className="text-center">
-                <FileText className="mx-auto text-cyan-600 mb-2" size={48} />
-                <p className="text-[10px] font-black text-cyan-700 uppercase">
-                    PDF Uploaded
-                </p>
-            </div>
-        ) : isVideo && preview ? (
-            <video src={preview} className="w-full h-full object-cover" />
-        ) : preview ? (
-            <img
-                src={preview}
-                alt="preview"
-                className="w-full h-full object-cover transition-transform group-hover:scale-110"
-            />
-        ) : (
-            <div className="text-slate-300 flex flex-col items-center gap-2">
-                {React.cloneElement(icon, { size: 32 })}
-                <p className="text-[10px] font-bold">NO FILE</p>
-            </div>
-        )}
-            
-            <label className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
-                <input type="file" className="hidden" onChange={(e) => onFileChange(e, type)} />
-                <span className="text-white text-xs font-black uppercase tracking-widest bg-cyan-600 px-4 py-2 rounded-lg">Browse</span>
-            </label>
-        </div>
+const UploadCard = ({ title, icon, type, preview, isPdf, isVideo, onFileChange, onUpload, onDelete, uploading, message, hasFile }) => {
+    // Determine the state
+    const isNewFileSelected = (type === 'profile' && preview && !hasFile) || 
+                              (type === 'resumePdf' && preview && !hasFile) || 
+                              (type === 'resumeVideo' && preview && !hasFile);
+    
+    // We can be more precise by checking if the preview is a local blob or a server URL
+    const isLocalBlob = preview?.startsWith('blob:');
+    const isAlreadyUploaded = hasFile && !isLocalBlob;
 
-        <div className="flex w-full gap-2 mt-auto">
-            <button 
-                type="button" onClick={() => onUpload(type)} disabled={uploading}
-                className="flex-1 py-2 bg-slate-900 text-white rounded-xl text-xs font-black hover:bg-cyan-600 transition-colors disabled:opacity-50"
-            >
-                {uploading ? '...' : 'UPLOAD'}
-            </button>
-            <button 
-                type="button" onClick={() => onDelete(type)}
-                className="p-2 bg-slate-50 text-slate-400 rounded-xl hover:bg-red-50 hover:text-red-500 transition-colors border border-slate-100"
-            >
-                <Trash2 size={16} />
-            </button>
+    return (
+        <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col items-center">
+            <div className="flex items-center gap-2 mb-4 w-full justify-center">
+                {React.cloneElement(icon, { size: 16, className: "text-cyan-600" })}
+                <h3 className="font-black text-slate-900 text-sm uppercase tracking-tighter">{title}</h3>
+            </div>
+            
+            <div className="w-full aspect-square rounded-2xl bg-slate-50 border-2 border-dashed border-slate-200 mb-4 overflow-hidden flex items-center justify-center relative group">
+                {isPdf && preview ? (
+                    <iframe
+                        src={preview}
+                        title="PDF Preview"
+                        className="w-full h-full rounded-xl"
+                    />
+                ) : isPdf && isAlreadyUploaded ? (
+                    <div className="text-center">
+                        <FileText className="mx-auto text-cyan-600 mb-2" size={48} />
+                        <p className="text-[10px] font-black text-cyan-700 uppercase">PDF Uploaded</p>
+                    </div>
+                ) : isVideo && preview ? (
+                    <video src={preview} className="w-full h-full object-cover" />
+                ) : preview ? (
+                    <img
+                        src={preview}
+                        alt="preview"
+                        className="w-full h-full object-cover transition-transform group-hover:scale-110"
+                    />
+                ) : (
+                    <div className="text-slate-300 flex flex-col items-center gap-2">
+                        {React.cloneElement(icon, { size: 32 })}
+                        <p className="text-[10px] font-bold">NO FILE</p>
+                    </div>
+                )}
+                
+                {/* Overlay only shows if NOT already uploaded or if we want to replace */}
+                {(!isAlreadyUploaded || isLocalBlob) && (
+                    <label className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
+                        <input type="file" className="hidden" onChange={(e) => onFileChange(e, type)} />
+                        <span className="text-white text-xs font-black uppercase tracking-widest bg-cyan-600 px-4 py-2 rounded-lg">
+                            {isLocalBlob ? 'Change File' : 'Browse'}
+                        </span>
+                    </label>
+                )}
+            </div>
+
+            <div className="flex w-full gap-2 mt-auto">
+                {isLocalBlob ? (
+                    <button 
+                        type="button" 
+                        onClick={() => onUpload(type)} 
+                        disabled={uploading}
+                        className="flex-1 py-2 bg-cyan-600 text-white rounded-xl text-xs font-black hover:bg-cyan-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                        {uploading ? '...' : (
+                            <>
+                                <Save size={14} /> 
+                                CONFIRM UPLOAD
+                            </>
+                        )}
+                    </button>
+                ) : isAlreadyUploaded ? (
+                    <button 
+                        type="button" 
+                        onClick={() => onDelete(type)}
+                        className="flex-1 py-2 bg-red-50 text-red-600 border border-red-100 rounded-xl text-xs font-black hover:bg-red-600 hover:text-white transition-all flex items-center justify-center gap-2"
+                    >
+                        <Trash2 size={14} />
+                        DELETE UPLOADED
+                    </button>
+                ) : (
+                    <div className="flex-1 py-2 bg-slate-100 text-slate-400 rounded-xl text-[10px] font-black text-center uppercase border border-slate-200">
+                        Pending Selection
+                    </div>
+                )}
+            </div>
+            {message && <p className="text-[10px] font-bold mt-2 text-cyan-600 text-center leading-tight uppercase animate-pulse">{message}</p>}
         </div>
-        {message && <p className="text-[10px] font-bold mt-2 text-cyan-600 text-center leading-tight uppercase">{message}</p>}
-    </div>
-)
+    );
+};
 
 export default StudentDetail

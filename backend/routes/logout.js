@@ -1,31 +1,19 @@
-// routes/logout.js
 const express = require('express');
 const router = express.Router();
 
-// Logout route
+/**
+ * Logout Route
+ * In a stateless JWT architecture, the server doesn't "log out" a user.
+ * The client simply discards the token. This route exists to provide a 
+ * consistent endpoint and clear any lingering cookies.
+ */
 router.get('/', (req, res) => {
-  // If using Passport sessions, log out
-  if (req.logout) {
-    req.logout(err => {
-      if (err) console.error('Logout error:', err);
-    });
-  }
-
-  // Destroy session if exists
-  if (req.session) {
-    req.session.destroy(err => {
-      if (err) console.error('Session destruction error:', err);
-    });
-  }
-
-  // Clear cookie just in case
-  res.clearCookie('connect.sid');
-
-  // For JWT-based auth, frontend should also remove token
-  // You can send a response to indicate successful logout
+  // Clear the session cookie just in case it was set by a previous version
+  res.clearCookie('portal.sid');
+  
   res.status(200).json({
     success: true,
-    message: 'Logged out successfully. Please remove JWT on client side.'
+    message: 'Logged out successfully. Token should be cleared on the client side.'
   });
 });
 

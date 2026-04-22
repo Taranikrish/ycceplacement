@@ -1,7 +1,11 @@
 const Student = require('../../models/student');
 const cloudinary = require('cloudinary').v2;
+const fs = require('fs');
+const { Vimeo } = require('@vimeo/vimeo');
 
-// Configure Cloudinary
+// =======================
+// CLOUDINARY CONFIG (unchanged — used for images & PDFs only)
+// =======================
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
@@ -11,6 +15,20 @@ console.log('Cloudinary config:', {
   cloud: process.env.CLOUDINARY_CLOUD_NAME,
   key: process.env.CLOUDINARY_API_KEY ? 'SET' : 'MISSING',
   secret: process.env.CLOUDINARY_API_SECRET ? 'SET' : 'MISSING'
+});
+
+// =======================
+// VIMEO CLIENT INIT
+// =======================
+const vimeoClient = new Vimeo(
+  process.env.VIMEO_CLIENT_ID,
+  process.env.VIMEO_CLIENT_SECRET,
+  process.env.VIMEO_ACCESS_TOKEN
+);
+console.log('Vimeo config:', {
+  clientId: process.env.VIMEO_CLIENT_ID ? 'SET' : 'MISSING',
+  clientSecret: process.env.VIMEO_CLIENT_SECRET ? 'SET' : 'MISSING',
+  accessToken: process.env.VIMEO_ACCESS_TOKEN ? 'SET' : 'MISSING'
 });
 
 // Helper function to upload to Cloudinary
@@ -38,6 +56,150 @@ const uploadToCloudinary = (buffer, folder, resourceType = 'image', transformati
     }).end(buffer);
   });
 };
+
+// =======================
+// VIMEO HELPERS
+// =======================
+
+/**
+ * Safely deletes a temp file. Silently ignores errors (file may already be gone).
+ */
+const cleanupTempFile = (filePath) => {
+  try {
+    if (filePath && fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+      console.log('[Vimeo] Temp file cleaned up:', filePath);
+    }
+  } catch (err) {
+    console.error('[Vimeo] Failed to clean up temp file:', err.message);
+  }
+};
+
+/**
+ * Uploads a file to Vimeo with retry support.
+ * Returns a Promise that resolves with the Vimeo URI (e.g. /videos/123456789).
+ */
+const uploadToVimeo = (filePath, metadata, maxRetries = 2) => {
+  return new Promise((resolve, reject) => {
+    let attempt = 0;
+
+    const tryUpload = () => {
+      attempt++;
+      console.log(`[Vimeo] Upload attempt ${attempt}/${maxRetries + 1}...`);
+
+      vimeoClient.upload(
+        filePath,
+        metadata,
+        // Success callback
+        (uri) => {
+          console.log(`[Vimeo] Upload successful! URI: ${uri}`);
+          resolve(uri);
+        },
+        // Progress callback
+        (bytesUploaded, bytesTotal) => {
+          const pct = ((bytesUploaded / bytesTotal) * 100).toFixed(1);
+          console.log(`[Vimeo] Upload progress: ${pct}% (${bytesUploaded}/${bytesTotal})`);
+        },
+        // Error callback
+        (error) => {
+          console.error(`[Vimeo] Upload error (attempt ${attempt}):`, error);
+          if (attempt <= maxRetries) {
+            console.log(`[Vimeo] Retrying upload...`);
+            setTimeout(tryUpload, 2000 * attempt); // exponential-ish backoff
+          } else {
+            reject(new Error(`Vimeo upload failed after ${attempt} attempts: ${error}`));
+          }
+        }
+      );
+    };
+
+    tryUpload();
+  });
+};
+
+/**
+ * Fetches the correct embed URL using Vimeo oEmbed API.
+ * For unlisted videos, we first fetch the privacy hash to construct a valid oEmbed query.
+ * Includes a robust retry mechanism to handle Vimeo propagation/processing delays.
+ */
+const getVimeoVideoLink = async (videoId, retries = 5) => {
+  let attempt = 0;
+  
+  // Initial wait - Vimeo needs time to register the new video in its metadata & oEmbed systems
+  console.log(`[Vimeo] Waiting 8s for initial processing of video: ${videoId}...`);
+  await new Promise(r => setTimeout(r, 8000));
+
+  while (attempt < retries) {
+    try {
+      attempt++;
+      console.log(`[Vimeo] oEmbed Retrieval - Attempt ${attempt}/${retries}...`);
+
+      // 1. Get the privacy hash from Vimeo Metadata API
+      // We use the SDK as it's more reliable than oEmbed for brand new videos
+      const videoData = await new Promise((resolve, reject) => {
+        vimeoClient.request({
+          method: 'GET',
+          path: `/videos/${videoId}?fields=privacy,link`
+        }, (error, body) => {
+          if (error) {
+            console.error(`[Vimeo] Metadata API fail (Attempt ${attempt}):`, error.message || error);
+            reject(error);
+          } else {
+            resolve(body);
+          }
+        });
+      });
+
+      const privacyHash = videoData.privacy?.h || null;
+      console.log(`[Vimeo] Found privacy hash: ${privacyHash || 'None'}`);
+      
+      // 2. Construct official oEmbed lookup URL
+      // Unlisted videos MUST include the hash in the URL for oEmbed to work
+      const oEmbedUrl = privacyHash 
+        ? `https://vimeo.com/api/oembed.json?url=https://vimeo.com/${videoId}/${privacyHash}`
+        : `https://vimeo.com/api/oembed.json?url=https://vimeo.com/${videoId}`;
+
+      console.log(`[Vimeo] Requesting official oEmbed data: ${oEmbedUrl}`);
+
+      const response = await fetch(oEmbedUrl);
+      if (!response.ok) {
+        throw new Error(`oEmbed API returned ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      if (!data || !data.html) {
+        throw new Error('Embed HTML missing in oEmbed response');
+      }
+
+      // 3. Extract src attribute (the clean player URL)
+      const match = data.html.match(/src="([^"]+)"/);
+      const embedUrl = match ? match[1] : null;
+
+      if (!embedUrl) {
+        throw new Error('Failed to parse src from oEmbed HTML');
+      }
+
+      console.log('[Vimeo] Success! Extracted embed URL:', embedUrl);
+      return embedUrl;
+
+    } catch (error) {
+      console.warn(`[Vimeo] getVimeoVideoLink attempt ${attempt} failed: ${error.message}`);
+      
+      if (attempt < retries) {
+        const waitTime = 3000 * attempt;
+        console.log(`[Vimeo] Retrying in ${waitTime/1000}s...`);
+        await new Promise(r => setTimeout(r, waitTime));
+      } else {
+        throw new Error(`Exhausted all ${retries} oEmbed fetch attempts. Last error: ${error.message}`);
+      }
+    }
+  }
+};
+
+// =======================
+// CONTROLLERS
+// =======================
 
 const getStudentProfile = async (req, res) => {
   try {
@@ -186,7 +348,7 @@ const updateStudentProfile = async (req, res) => {
   }
 };
 
-// Upload profile photo
+// Upload profile photo (Cloudinary — unchanged)
 const uploadProfilePhoto = async (req, res) => {
   try {
     if (!req.file) {
@@ -221,7 +383,7 @@ const uploadProfilePhoto = async (req, res) => {
   }
 };
 
-// Upload resume PDF
+// Upload resume PDF (Cloudinary — unchanged)
 const uploadResumePdf = async (req, res) => {
   try {
     if (!req.file) {
@@ -260,41 +422,72 @@ const uploadResumePdf = async (req, res) => {
   }
 };
 
-// Upload resume video
+// =======================
+// Upload resume video (VIMEO)
+// =======================
 const uploadResumeVideo = async (req, res) => {
+  const tempFilePath = req.file ? req.file.path : null;
+
   try {
     if (!req.file) {
       return res.status(400).json({ message: 'No file uploaded' });
     }
 
-    const result = await uploadToCloudinary(
-      req.file.buffer,
-      'student_videos',
-      'video'
-    );
+    console.log('[Vimeo] Uploading video for student:', req.user._id);
 
+    // 1. Simple upload to Vimeo
+    const vimeoUri = await new Promise((resolve, reject) => {
+      vimeoClient.upload(
+        tempFilePath,
+        {
+          name: `Student_Video_${req.user._id}`,
+          privacy: { view: 'unlisted' }
+        },
+        (uri) => resolve(uri),
+        null, // No progress needed for simple version
+        (error) => reject(error)
+      );
+    });
+
+    const videoId = vimeoUri.split('/').pop();
+
+    // 2. Fetch the official watch link (includes privacy hash for unlisted videos)
+    const vimeoLink = await new Promise((resolve, reject) => {
+      vimeoClient.request({
+        method: 'GET',
+        path: `/videos/${videoId}?fields=link`
+      }, (error, body) => {
+        if (error) reject(error);
+        else resolve(body.link);
+      });
+    });
+
+    console.log('[Vimeo] Official Link retrieved:', vimeoLink);
+
+    // 3. Update DB
     const student = await Student.findByIdAndUpdate(
       req.user._id,
-      { resumeVideo: result.secure_url, resumeVideoPublicId: result.public_id },
+      { resumeVideo: vimeoLink, resumeVideoPublicId: videoId },
       { new: true }
     );
 
-    if (!student) {
-      return res.status(404).json({ message: 'Student not found' });
-    }
+    // 3. Cleanup
+    cleanupTempFile(tempFilePath);
 
     res.json({
-      message: 'Resume video uploaded successfully',
-      resumeVideo: result.secure_url,
-      resumeVideoPublicId: result.public_id
+      message: 'Video uploaded successfully',
+      resumeVideo: vimeoLink,
+      resumeVideoPublicId: videoId
     });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Server error' });
+
+  } catch (error) {
+    console.error('[Vimeo] Upload fail:', error);
+    if (tempFilePath) cleanupTempFile(tempFilePath);
+    res.status(500).json({ message: 'Failed to upload video' });
   }
 };
 
-// Delete profile photo
+// Delete profile photo (Cloudinary — unchanged)
 const deleteProfilePhoto = async (req, res) => {
   try {
     const student = await Student.findById(req.user._id);
@@ -314,7 +507,7 @@ const deleteProfilePhoto = async (req, res) => {
   }
 };
 
-// Delete resume PDF
+// Delete resume PDF (Cloudinary — unchanged)
 const deleteResumePdf = async (req, res) => {
   try {
     const student = await Student.findById(req.user._id);
@@ -334,20 +527,51 @@ const deleteResumePdf = async (req, res) => {
   }
 };
 
-// Delete resume video
+// =======================
+// Delete resume video (VIMEO)
+// =======================
 const deleteResumeVideo = async (req, res) => {
   try {
     const student = await Student.findById(req.user._id);
-    if (!student) return res.status(404).json({ message: 'Student not found' });
-
-    if (student.resumeVideoPublicId) {
-      await cloudinary.uploader.destroy(student.resumeVideoPublicId, { resource_type: 'video', type: 'upload' });
-      student.resumeVideo = null;
-      student.resumeVideoPublicId = null;
-      await student.save();
+    if (!student) {
+      return res.status(404).json({ message: 'Student not found' });
     }
 
+    if (!student.resumeVideoPublicId) {
+      return res.json({ message: 'No video to delete' });
+    }
+
+    // Delete from Vimeo
+    await new Promise((resolve, reject) => {
+      vimeoClient.request(
+        {
+          method: 'DELETE',
+          path: `/videos/${student.resumeVideoPublicId}`,
+        },
+        (error) => {
+          if (error) {
+            if (error.status_code === 404) {
+              console.log('[Vimeo] Already deleted');
+              return resolve();
+            }
+
+            console.error('[Vimeo] Delete error:', error);
+            return reject(error);
+          }
+
+          console.log('[Vimeo] Video deleted:', student.resumeVideoPublicId);
+          resolve();
+        }
+      );
+    });
+
+    // Only clear DB AFTER successful delete
+    student.resumeVideo = null;
+    student.resumeVideoPublicId = null;
+    await student.save();
+
     return res.json({ message: 'Resume video deleted successfully' });
+
   } catch (err) {
     console.error('deleteResumeVideo error:', err);
     res.status(500).json({ message: 'Server error' });

@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import React, { useState, useEffect, useMemo } from 'react'
 import { 
   User, 
   Mail, 
@@ -11,7 +10,6 @@ import {
   Video, 
   ExternalLink,
   AlertCircle,
-  ShieldCheck
 } from 'lucide-react'
 
 function StudentProfile() {
@@ -38,7 +36,7 @@ function StudentProfile() {
       } else {
         setError('Failed to fetch student profile')
       }
-    } catch (error) {
+    } catch {
       setError('Error connecting to the server')
     } finally {
       setLoading(false)
@@ -69,7 +67,7 @@ function StudentProfile() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 py-10 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-slate-50 py-10 px-4 sm:px-6 lg:px-8 font-sans">
       <div className="max-w-5xl mx-auto">
         
         {/* --- PROFILE HEADER CARD --- */}
@@ -92,11 +90,6 @@ function StudentProfile() {
                   <User size={48} />
                 </div>
               )}
-              {/* {studentProfile?.isregistered && (
-                <div className="absolute -bottom-2 -right-2 bg-green-500 text-white p-1.5 rounded-full border-4 border-white">
-                  <ShieldCheck size={18} />
-                </div>
-              )} */}
             </div>
             
             <div className="flex-1 text-center md:text-left">
@@ -106,7 +99,7 @@ function StudentProfile() {
                   <Mail size={16} className="text-cyan-600" /> {studentProfile?.email}
                 </span>
                 <span className="flex items-center gap-1.5 text-slate-500 font-medium text-sm">
-                  {/* <Phone size={16} className="text-cyan-600" /> {studentProfile?.mobileNumber || 'N/A'} */}
+                   <Phone size={16} className="text-cyan-600" /> {studentProfile?.mobileNumber || 'N/A'}
                 </span>
               </div>
             </div>
@@ -138,7 +131,6 @@ function StudentProfile() {
                 <InfoBlock icon={<Hash />} label="Roll Number" value={studentProfile?.rollNumber} />
                 <InfoBlock icon={<Award />} label="Current CGPA" value={studentProfile?.cgpa ? Number(studentProfile.cgpa).toFixed(2) : 'N/A'} isHighlight />
                 <InfoBlock icon={<ExternalLink />} label="Engineering Branch" value={studentProfile?.branch} />
-                <InfoBlock icon={<Phone />} label="Contact Number" value={studentProfile?.mobileNumber} />
                 <InfoBlock icon={<Award />} label="Registration Status" value={studentProfile?.isregistered ? 'Complete' : 'Pending'} />
               </div>
             </div>
@@ -167,13 +159,11 @@ function StudentProfile() {
                   icon={<FileCheck />} 
                   label="Resume (PDF)" 
                   url={studentProfile?.resumePdf} 
-                  type="pdf" 
                 />
                 <ResumeLink 
                   icon={<Video />} 
                   label="Video Pitch" 
                   url={studentProfile?.resumeVideo} 
-                  type="video" 
                 />
               </div>
             </div>
@@ -199,12 +189,12 @@ const InfoBlock = ({ icon, label, value, isHighlight }) => (
   </div>
 )
 
-const ResumeLink = ({ icon, label, url, type }) => (
+const ResumeLink = ({ icon, label, url }) => (
   <a 
     href={url || '#'} 
     target="_blank" 
     rel="noreferrer"
-    className={`group flex items-center justify-between p-4 rounded-2xl border transition-all ${
+    className={`group w-full flex items-center justify-between p-4 rounded-2xl border transition-all ${
       url 
       ? 'border-cyan-100 hover:bg-cyan-600 hover:border-cyan-600' 
       : 'border-slate-100 opacity-50 cursor-not-allowed'
@@ -212,21 +202,28 @@ const ResumeLink = ({ icon, label, url, type }) => (
   >
     <div className="flex items-center gap-3">
       <div className={`p-2 rounded-lg transition-colors ${
-        url ? 'bg-cyan-50 text-cyan-600 group-hover:bg-white/20 group-hover:text-white' : 'bg-slate-50 text-slate-400'
+        url 
+        ? 'bg-cyan-50 text-cyan-600 group-hover:bg-white/20 group-hover:text-white' 
+        : 'bg-slate-50 text-slate-400'
       }`}>
         {React.cloneElement(icon, { size: 20 })}
       </div>
-      <div>
-        <p className={`text-sm font-bold transition-colors ${url ? 'text-slate-900 group-hover:text-white' : 'text-slate-400'}`}>
+      <div className="text-left">
+        <p className={`text-sm font-bold transition-colors ${
+          url ? 'text-slate-900 group-hover:text-white' : 'text-slate-400'
+        }`}>
           {label}
         </p>
-        <p className={`text-[10px] uppercase font-medium transition-colors ${url ? 'text-cyan-600 group-hover:text-cyan-100' : 'text-slate-400'}`}>
-          {url ? 'View Document' : 'No File Uploaded'}
+        <p className={`text-[10px] uppercase font-medium transition-colors ${
+          url ? 'text-cyan-600 group-hover:text-cyan-100' : 'text-slate-400'
+        }`}>
+          {url ? 'Open Link' : 'No File Uploaded'}
         </p>
       </div>
     </div>
     {url && <ExternalLink size={14} className="text-cyan-400 group-hover:text-white" />}
   </a>
 )
+
 
 export default StudentProfile

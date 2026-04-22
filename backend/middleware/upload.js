@@ -1,12 +1,35 @@
 // middleware/upload.js
 const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 
-// Use memory storage for multer (files are available as buffer)
-// NOTE: memoryStorage keeps files in RAM — be careful with large uploads (PDFs are usually fine;
-// videos should use diskStorage or stream directly to cloud storage).
+// =======================
+// STORAGE ENGINES
+// =======================
+
+// Memory storage for images and PDFs (small files → Cloudinary via buffer)
 const memoryStorage = multer.memoryStorage();
 
-// Common file filters
+// Disk storage for videos (large files → written to tmp/ then uploaded to Vimeo)
+const tmpDir = path.join(__dirname, '..', 'tmp');
+if (!fs.existsSync(tmpDir)) {
+  fs.mkdirSync(tmpDir, { recursive: true });
+}
+
+const videoDiskStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, tmpDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueName = `${Date.now()}-${file.originalname}`;
+    cb(null, uniqueName);
+  },
+});
+
+// =======================
+// FILE FILTERS
+// =======================
+
 const imageFileFilter = (req, file, cb) => {
   if (!file.mimetype.startsWith('image/')) {
     return cb(new Error('Only image files are allowed!'), false);
@@ -29,13 +52,18 @@ const pdfFileFilter = (req, file, cb) => {
   cb(null, true);
 };
 
-// Limits (adjust to suit your needs)
-const imageLimits = { fileSize: 5 * 1024 * 1024 }; // 5 MB
-const resumePdfLimits = { fileSize: 10 * 1024 * 1024 }; // 10 MB for resume images
-const videoLimits = { fileSize: 50 * 1024 * 1024 }; // 50 MB for videos (adjust as needed)
-const jdFileLimits = { fileSize: 10 * 1024 * 1024 }; // 10 MB for JD / PDF files
+// =======================
+// SIZE LIMITS
+// =======================
+const imageLimits = { fileSize: 5 * 1024 * 1024 };     // 5 MB
+const resumePdfLimits = { fileSize: 10 * 1024 * 1024 }; // 10 MB
+const videoLimits = { fileSize: 100 * 1024 * 1024 };    // 100 MB (Vimeo handles large files)
+const jdFileLimits = { fileSize: 10 * 1024 * 1024 };    // 10 MB
 
-// Multer instances (use these as middleware in routes)
+// =======================
+// MULTER INSTANCES
+// =======================
+
 const uploadProfilePhoto = multer({
   storage: memoryStorage,
   fileFilter: imageFileFilter,
@@ -48,8 +76,9 @@ const uploadResumePdf = multer({
   limits: resumePdfLimits,
 });
 
+// Video uses diskStorage to avoid memory overload
 const uploadResumeVideo = multer({
-  storage: memoryStorage,
+  storage: videoDiskStorage,
   fileFilter: videoFileFilter,
   limits: videoLimits,
 });
@@ -61,9 +90,27 @@ const uploadJdFile = multer({
   limits: jdFileLimits,
 });
 
+// =======================
+// VIDEO SIZE VALIDATION MIDDLEWARE
+// =======================
+// Additional layer: validates file size after multer processes it
+const validateVideoSize = (maxSizeMB = 100) => {
+  return (req, res, next) => {
+    if (req.file && req.file.size > maxSizeMB * 1024 * 1024) {
+      // Clean up the temp file
+      try { fs.unlinkSync(req.file.path); } catch (e) { /* ignore */ }
+      return res.status(400).json({
+        message: `Video file too large. Maximum size is ${maxSizeMB}MB.`
+      });
+    }
+    next();
+  };
+};
+
 module.exports = {
   uploadProfilePhoto,
   uploadResumePdf,
   uploadResumeVideo,
-  uploadJdFile, // exported for routes that accept PDF (JD) files
+  uploadJdFile,
+  validateVideoSize,
 };

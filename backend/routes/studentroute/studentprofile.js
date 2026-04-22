@@ -12,7 +12,7 @@ const {
   deleteResumeVideo
 } = require('../../controllers/studentcontroller/studentprofile');
 const { requireAuth, requireRole } = require('../../middleware/auth');
-const { uploadProfilePhoto: uploadProfilePhotoMiddleware, uploadResumePdf: uploadResumePdfMiddleware, uploadResumeVideo: uploadResumeVideoMiddleware } = require('../../middleware/upload');
+const { uploadProfilePhoto: uploadProfilePhotoMiddleware, uploadResumePdf: uploadResumePdfMiddleware, uploadResumeVideo: uploadResumeVideoMiddleware, validateVideoSize } = require('../../middleware/upload');
 
 // Get student profile
 router.get('/profile', requireAuth, requireRole('student'), getStudentProfile);
@@ -30,7 +30,7 @@ router.post('/profile/photo', requireAuth, requireRole('student'), uploadProfile
 router.post('/profile/resume-pdf', requireAuth, requireRole('student'), uploadResumePdfMiddleware.single('resumePdf'), uploadResumePdf);
 
 // Upload resume video
-router.post('/profile/resume-video', requireAuth, requireRole('student'), uploadResumeVideoMiddleware.single('resumeVideo'), uploadResumeVideo);
+router.post('/profile/resume-video', requireAuth, requireRole('student'), uploadResumeVideoMiddleware.single('resumeVideo'), validateVideoSize(100), uploadResumeVideo);
 
 // Delete profile photo
 router.delete('/profile/photo', requireAuth, requireRole('student'), deleteProfilePhoto);
