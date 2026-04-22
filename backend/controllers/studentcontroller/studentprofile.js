@@ -1,21 +1,7 @@
 const Student = require('../../models/student');
-const cloudinary = require('cloudinary').v2;
 const fs = require('fs');
+const path = require('path');
 const { Vimeo } = require('@vimeo/vimeo');
-
-// =======================
-// CLOUDINARY CONFIG (unchanged — used for images & PDFs only)
-// =======================
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
-console.log('Cloudinary config:', {
-  cloud: process.env.CLOUDINARY_CLOUD_NAME,
-  key: process.env.CLOUDINARY_API_KEY ? 'SET' : 'MISSING',
-  secret: process.env.CLOUDINARY_API_SECRET ? 'SET' : 'MISSING'
-});
 
 // =======================
 // VIMEO CLIENT INIT
@@ -25,37 +11,11 @@ const vimeoClient = new Vimeo(
   process.env.VIMEO_CLIENT_SECRET,
   process.env.VIMEO_ACCESS_TOKEN
 );
-console.log('Vimeo config:', {
-  clientId: process.env.VIMEO_CLIENT_ID ? 'SET' : 'MISSING',
-  clientSecret: process.env.VIMEO_CLIENT_SECRET ? 'SET' : 'MISSING',
-  accessToken: process.env.VIMEO_ACCESS_TOKEN ? 'SET' : 'MISSING'
-});
-
-// Helper function to upload to Cloudinary
-const uploadToCloudinary = (buffer, folder, resourceType = 'image', transformation = [], format = null) => {
-  return new Promise((resolve, reject) => {
-    const uploadOptions = {
-      folder,
-      resource_type: resourceType,
-      type: 'upload',           // ensure asset is created as normal uploaded resource
-      transformation,
-    };
-
-    if (format) {
-      uploadOptions.format = format;
-    }
-
-    cloudinary.uploader.upload_stream(uploadOptions, (error, result) => {
-      if (error) {
-        console.error('Cloudinary upload error:', error);
-        reject(error);
-      } else {
-        console.log('Cloudinary upload success:', result && result.public_id);
-        resolve(result);
-      }
-    }).end(buffer);
-  });
-};
+// console.log('Vimeo config:', {
+//   clientId: process.env.VIMEO_CLIENT_ID ? 'SET' : 'MISSING',
+//   clientSecret: process.env.VIMEO_CLIENT_SECRET ? 'SET' : 'MISSING',
+//   accessToken: process.env.VIMEO_ACCESS_TOKEN ? 'SET' : 'MISSING'
+// });
 
 // =======================
 // VIMEO HELPERS
@@ -231,8 +191,9 @@ const getStudentProfile = async (req, res) => {
       address: student.address || null,
       city: student.city || null,
       state: student.state || null,
-      pin: student.pin || null
-
+      pin: student.pin || null,
+      yearOfStudy: student.yearOfStudy || null,
+      currentSemester: student.currentSemester || null
     });
   } catch (err) {
     console.error(err);
@@ -276,7 +237,9 @@ const getStudentProfileById = async (req, res) => {
       address: student.address || null,
       city: student.city || null,
       state: student.state || null,
-      pin: student.pin || null
+      pin: student.pin || null,
+      yearOfStudy: student.yearOfStudy || null,
+      currentSemester: student.currentSemester || null
     });
   } catch (err) {
     console.error(err);
@@ -286,12 +249,15 @@ const getStudentProfileById = async (req, res) => {
 
 const updateStudentProfile = async (req, res) => {
   try {
-    const { branch, sgpa, domain, mobileNumber, address, city, state, pin } = req.body;
+    const { branch, sgpa, domain, mobileNumber, address, city, state, pin, yearOfStudy, currentSemester } = req.body;
 
-    // Calculate CGPA as average of 6 sgpa values
+    // Calculate CGPA as average of non-zero sgpa values
     let cgpa = 0;
-    if (sgpa && Array.isArray(sgpa) && sgpa.length === 6) {
-      cgpa = sgpa.reduce((sum, val) => sum + val, 0) / 6;
+    if (sgpa && Array.isArray(sgpa)) {
+      const validSgpa = sgpa.map(s => parseFloat(s)).filter(s => s > 0);
+      if (validSgpa.length > 0) {
+        cgpa = validSgpa.reduce((sum, val) => sum + val, 0) / validSgpa.length;
+      }
     }
 
     const updatedStudent = await Student.findByIdAndUpdate(
@@ -302,10 +268,12 @@ const updateStudentProfile = async (req, res) => {
         cgpa,
         mobileNumber,
         domain,
-        address, // Add the address field here
+        address,
         city,
         state,
         pin,
+        yearOfStudy,
+        currentSemester,
         isregistered: true
       },
       { new: true }
@@ -332,6 +300,8 @@ const updateStudentProfile = async (req, res) => {
         city: updatedStudent.city || '',
         state: updatedStudent.state || '',
         pin: updatedStudent.pin || '',
+        yearOfStudy: updatedStudent.yearOfStudy || null,
+        currentSemester: updatedStudent.currentSemester || null,
         // media fields
         profilePhoto: updatedStudent.profilePhoto || null,
         profilePhotoPublicId: updatedStudent.profilePhotoPublicId || null,
@@ -348,76 +318,98 @@ const updateStudentProfile = async (req, res) => {
   }
 };
 
-// Upload profile photo (Cloudinary — unchanged)
+// Upload profile photo (Local Storage)
 const uploadProfilePhoto = async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ message: 'No file uploaded' });
     }
 
-    const result = await uploadToCloudinary(
-      req.file.buffer,
-      'student_profiles',
-      'image',
-      [{ width: 300, height: 300, crop: 'fill' }]
-    );
+    const photoUrl = `/uploads/profiles/${req.file.filename}`;
 
-    const student = await Student.findByIdAndUpdate(
-      req.user._id,
-      { profilePhoto: result.secure_url, profilePhotoPublicId: result.public_id },
-      { new: true }
-    );
+    const student = await Student.findById(req.user._id);
 
     if (!student) {
+      if (fs.existsSync(req.file.path)) {
+        fs.unlink(req.file.path, (err) => {
+          if (err) console.error('Local file delete error:', err);
+        });
+      }
       return res.status(404).json({ message: 'Student not found' });
     }
 
+    // Delete the old profile photo from disk if it exists
+    if (student.profilePhotoPublicId) {
+      const oldPath = path.join(__dirname, '..', '..', 'public', 'uploads', 'profiles', student.profilePhotoPublicId);
+      if (fs.existsSync(oldPath)) {
+        fs.unlink(oldPath, (err) => {
+          if (err) console.error('Failed to delete old profile photo:', err);
+        });
+      }
+    }
+
+    student.profilePhoto = photoUrl;
+    student.profilePhotoPublicId = req.file.filename;
+    await student.save();
+
     res.json({
       message: 'Profile photo uploaded successfully',
-      profilePhoto: result.secure_url,
-      profilePhotoPublicId: result.public_id
+      profilePhoto: photoUrl,
+      profilePhotoPublicId: req.file.filename
     });
   } catch (err) {
     console.error(err);
+    if (req.file) {
+      try { fs.unlinkSync(req.file.path); } catch (e) { /* ignore */ }
+    }
     res.status(500).json({ message: 'Server error' });
   }
 };
 
-// Upload resume PDF (Cloudinary — unchanged)
+// Upload resume PDF (Local Storage)
 const uploadResumePdf = async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ message: 'No file uploaded' });
     }
 
-    const result = await uploadToCloudinary(
-      req.file.buffer,
-      'student_resumes',
-      'image',
-      [],
-      'pdf' // Set format to pdf during upload for proper Content-Type
-    );
+    const pdfUrl = `/uploads/resumes/${req.file.filename}`;
 
-    // Use the secure_url which will now have the correct format
-    const pdfUrl = result.secure_url;
-
-    const student = await Student.findByIdAndUpdate(
-      req.user._id,
-      { resumePdf: pdfUrl, resumePdfPublicId: result.public_id },
-      { new: true }
-    );
+    const student = await Student.findById(req.user._id);
 
     if (!student) {
+      if (fs.existsSync(req.file.path)) {
+        fs.unlink(req.file.path, (err) => {
+          if (err) console.error('Local file delete error:', err);
+        });
+      }
       return res.status(404).json({ message: 'Student not found' });
     }
+
+    // Delete the old resume from disk if it exists
+    if (student.resumePdfPublicId) {
+      const oldPath = path.join(__dirname, '..', '..', 'public', 'uploads', 'resumes', student.resumePdfPublicId);
+      if (fs.existsSync(oldPath)) {
+        fs.unlink(oldPath, (err) => {
+          if (err) console.error('Failed to delete old resume:', err);
+        });
+      }
+    }
+
+    student.resumePdf = pdfUrl;
+    student.resumePdfPublicId = req.file.filename;
+    await student.save();
 
     res.json({
       message: 'Resume PDF uploaded successfully',
       resumePdf: pdfUrl,
-      resumePdfPublicId: result.public_id
+      resumePdfPublicId: req.file.filename
     });
   } catch (err) {
     console.error(err);
+    if (req.file) {
+      try { fs.unlinkSync(req.file.path); } catch (e) { /* ignore */ }
+    }
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -487,14 +479,19 @@ const uploadResumeVideo = async (req, res) => {
   }
 };
 
-// Delete profile photo (Cloudinary — unchanged)
+// Delete profile photo (Local Storage)
 const deleteProfilePhoto = async (req, res) => {
   try {
     const student = await Student.findById(req.user._id);
     if (!student) return res.status(404).json({ message: 'Student not found' });
 
     if (student.profilePhotoPublicId) {
-      await cloudinary.uploader.destroy(student.profilePhotoPublicId, { resource_type: 'image', type: 'upload' });
+      const filePath = path.join(__dirname, '..', '..', 'public', 'uploads', 'profiles', student.profilePhotoPublicId);
+      if (fs.existsSync(filePath)) {
+        fs.unlink(filePath, (err) => {
+           if (err) console.error('File delete error:', err);
+        });
+      }
       student.profilePhoto = null;
       student.profilePhotoPublicId = null;
       await student.save();
@@ -507,14 +504,19 @@ const deleteProfilePhoto = async (req, res) => {
   }
 };
 
-// Delete resume PDF (Cloudinary — unchanged)
+// Delete resume PDF (Local Storage)
 const deleteResumePdf = async (req, res) => {
   try {
     const student = await Student.findById(req.user._id);
     if (!student) return res.status(404).json({ message: 'Student not found' });
 
     if (student.resumePdfPublicId) {
-      await cloudinary.uploader.destroy(student.resumePdfPublicId, { resource_type: 'image', type: 'upload' });
+      const filePath = path.join(__dirname, '..', '..', 'public', 'uploads', 'resumes', student.resumePdfPublicId);
+      if (fs.existsSync(filePath)) {
+        fs.unlink(filePath, (err) => {
+           if (err) console.error('File delete error:', err);
+        });
+      }
       student.resumePdf = null;
       student.resumePdfPublicId = null;
       await student.save();

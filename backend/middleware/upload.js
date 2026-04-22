@@ -7,24 +7,42 @@ const fs = require('fs');
 // STORAGE ENGINES
 // =======================
 
-// Memory storage for images and PDFs (small files → Cloudinary via buffer)
-const memoryStorage = multer.memoryStorage();
-
-// Disk storage for videos (large files → written to tmp/ then uploaded to Vimeo)
+// Directories
 const tmpDir = path.join(__dirname, '..', 'tmp');
-if (!fs.existsSync(tmpDir)) {
-  fs.mkdirSync(tmpDir, { recursive: true });
-}
+const uploadsDir = path.join(__dirname, '..', 'public', 'uploads');
+const profileDir = path.join(uploadsDir, 'profiles');
+const resumeDir = path.join(uploadsDir, 'resumes');
+const jdDir = path.join(uploadsDir, 'jds');
 
-const videoDiskStorage = multer.diskStorage({
+[tmpDir, profileDir, resumeDir, jdDir].forEach(dir => {
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+});
+
+// Dynamic Disk Storage
+const customDiskStorage = (destinationDir) => multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, tmpDir);
+    cb(null, destinationDir);
   },
   filename: (req, file, cb) => {
-    const uniqueName = `${Date.now()}-${file.originalname}`;
-    cb(null, uniqueName);
+    let ext = file.mimetype.split('/')[1];
+    // Simple mapping to handle cases like 'jpeg' -> 'jpg' if needed, but mimetype split is usually fine.
+    if (ext === 'octet-stream') ext = 'bin';
+
+    const userId = req.user && req.user._id ? req.user._id.toString() : 'guest';
+    const safeFilename = `${userId}_${Date.now()}_${Math.random()
+      .toString(36)
+      .substring(2)}.${ext}`;
+    
+    cb(null, safeFilename);
   },
 });
+
+const profileStorage = customDiskStorage(profileDir);
+const resumeStorage = customDiskStorage(resumeDir);
+const jdStorage = customDiskStorage(jdDir);
+const videoDiskStorage = customDiskStorage(tmpDir);
 
 // =======================
 // FILE FILTERS
@@ -65,13 +83,13 @@ const jdFileLimits = { fileSize: 10 * 1024 * 1024 };    // 10 MB
 // =======================
 
 const uploadProfilePhoto = multer({
-  storage: memoryStorage,
+  storage: profileStorage,
   fileFilter: imageFileFilter,
   limits: imageLimits,
 });
 
 const uploadResumePdf = multer({
-  storage: memoryStorage,
+  storage: resumeStorage,
   fileFilter: pdfFileFilter,
   limits: resumePdfLimits,
 });
@@ -85,7 +103,7 @@ const uploadResumeVideo = multer({
 
 // For JD / PDF uploads
 const uploadJdFile = multer({
-  storage: memoryStorage,
+  storage: jdStorage,
   fileFilter: pdfFileFilter,
   limits: jdFileLimits,
 });
@@ -97,8 +115,12 @@ const uploadJdFile = multer({
 const validateVideoSize = (maxSizeMB = 100) => {
   return (req, res, next) => {
     if (req.file && req.file.size > maxSizeMB * 1024 * 1024) {
-      // Clean up the temp file
-      try { fs.unlinkSync(req.file.path); } catch (e) { /* ignore */ }
+      // Clean up the temp file asynchronously
+      if (fs.existsSync(req.file.path)) {
+        fs.unlink(req.file.path, (err) => {
+          if (err) console.error('Temp video delete error:', err);
+        });
+      }
       return res.status(400).json({
         message: `Video file too large. Maximum size is ${maxSizeMB}MB.`
       });

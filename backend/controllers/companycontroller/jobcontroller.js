@@ -1,38 +1,8 @@
 const Job = require('../../models/job');
 const Application = require('../../models/application');
 const Company = require('../../models/company');
-const cloudinary = require('cloudinary').v2;
-
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
-
-const uploadToCloudinary = (buffer, folder, resourceType = 'image', transformation = [], format = null) => {
-  return new Promise((resolve, reject) => {
-    const uploadOptions = {
-      folder,
-      resource_type: resourceType,
-      type: 'upload',           // ensure asset is created as normal uploaded resource
-      transformation,
-    };
-
-    if (format) {
-      uploadOptions.format = format;
-    }
-
-    cloudinary.uploader.upload_stream(uploadOptions, (error, result) => {
-      if (error) {
-        console.error('Cloudinary upload error:', error);
-        reject(error);
-      } else {
-        console.log('Cloudinary upload success:', result && result.public_id);
-        resolve(result);
-      }
-    }).end(buffer);
-  });
-};
+const fs = require('fs');
+const path = require('path');
 
 const uploadJD = async (req, res) => {
   try {
@@ -40,37 +10,44 @@ const uploadJD = async (req, res) => {
       return res.status(400).json({ message: 'No file uploaded' });
     }
 
-    const result = await uploadToCloudinary(
-      req.file.buffer,
-      'jd_uploads',
-      'image',
-      [],
-      'pdf' // Set format to pdf during upload for proper Content-Type
-    );
+    // The JD PDF is stored in public/uploads/jds by multer diskStorage
+    const pdfUrl = `/uploads/jds/${req.file.filename}`;
 
-    // Use the secure_url which will now have the correct format
-    const pdfUrl = result.secure_url;
+    const updatedJob = await Job.findById(req.params.jobId);
 
-    const updatedJob = await Job.findOneAndUpdate(
-      { _id: req.params.jobId },
-      {
-        $set: {
-          jd_file: pdfUrl,
-          jd_public_id: result.public_id,
-        },
-      },
-      { new: true }
-    );
+    if (!updatedJob) {
+      if (fs.existsSync(req.file.path)) {
+        fs.unlink(req.file.path, (err) => {
+          if (err) console.error('Local file delete error:', err);
+        });
+      }
+      return res.status(404).json({ message: 'Job not found' });
+    }
 
-    if (!updatedJob) return res.status(404).json({ message: 'Job not found' });
+    // Delete the old JD from disk if it exists
+    if (updatedJob.jd_public_id) {
+      const oldPath = path.join(__dirname, '..', '..', 'public', 'uploads', 'jds', updatedJob.jd_public_id);
+      if (fs.existsSync(oldPath)) {
+        fs.unlink(oldPath, (err) => {
+          if (err) console.error('Failed to delete old JD file:', err);
+        });
+      }
+    }
+
+    updatedJob.jd_file = pdfUrl;
+    updatedJob.jd_public_id = req.file.filename;
+    await updatedJob.save();
 
     res.json({
       message: 'JD uploaded successfully',
       jd_file: pdfUrl,
-      jd_public_id: result.public_id
+      jd_public_id: req.file.filename
     });
   } catch (err) {
     console.error('uploadJD error:', err);
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlink(req.file.path, (e) => {});
+    }
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -99,21 +76,18 @@ const createJob = async (req, res) => {
       branch: branchArray,
     };
 
-    if (req.file && req.file.buffer) {
+    if (req.file) {
       try {
-        const result = await uploadToCloudinary(
-          req.file.buffer,
-          `jd_uploads/${companyId}`,
-          'image',
-          [],
-          'pdf'
-        );
-
-        jobData.jd_file = result.secure_url;
-        jobData.jd_public_id = result.public_id;
+        const pdfUrl = `/uploads/jds/${req.file.filename}`;
+        jobData.jd_file = pdfUrl;
+        jobData.jd_public_id = req.file.filename;
       } catch (uploadErr) {
-        console.error('Failed to upload JD while creating job:', uploadErr);
-        return res.status(500).json({ message: 'Failed to upload JD file' });
+        console.error('Failed to link JD while creating job:', uploadErr);
+        // Cleanup local file if failed
+        if (fs.existsSync(req.file.path)) {
+          fs.unlink(req.file.path, (e) => {});
+        }
+        return res.status(500).json({ message: 'Failed to process JD file' });
       }
     }
 
@@ -167,14 +141,11 @@ const deleteJob = async (req, res) => {
     if (!jobDoc) return res.status(404).json({ message: 'Job not found or you do not have permission to delete this job' });
 
     if (jobDoc.jd_public_id) {
-      try {
-        await cloudinary.uploader.destroy(jobDoc.jd_public_id, { resource_type: 'image' });
-      } catch (cloudErr) {
-        try {
-          await cloudinary.uploader.destroy(jobDoc.jd_public_id);
-        } catch (e) {
-          console.warn('Failed to remove JD from Cloudinary (continuing):', e);
-        }
+      const filePath = path.join(__dirname, '..', '..', 'public', 'uploads', 'jds', jobDoc.jd_public_id);
+      if (fs.existsSync(filePath)) {
+        fs.unlink(filePath, (e) => {
+          if (e) console.warn('Failed to remove JD from local storage (continuing):', e);
+        });
       }
     }
 

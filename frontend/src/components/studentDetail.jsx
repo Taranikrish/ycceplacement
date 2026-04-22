@@ -13,7 +13,9 @@ function StudentDetail() {
     const [formData, setFormData] = useState({
         branch: '',
         mobileNumber: '',
-        sgpa: ['', '', '', '', '', ''],
+        yearOfStudy: '',
+        currentSemester: '',
+        sgpa: ['', '', '', '', '', '', '', ''],
         domain: [],
         address: '',
         city: '',
@@ -57,7 +59,9 @@ function StudentDetail() {
                 setFormData({
                     branch: data.branch || '',
                     mobileNumber: data.mobileNumber || '',
-                    sgpa: data.sgpa || ['', '', '', '', '', ''],
+                    yearOfStudy: data.yearOfStudy || '',
+                    currentSemester: data.currentSemester || '',
+                    sgpa: data.sgpa || ['', '', '', '', '', '', '', ''],
                     domain: data.domain || [],
                     address: data.address || '',
                     city: data.city || '',
@@ -95,9 +99,9 @@ function StudentDetail() {
     }
 
     const calculateCgpa = () => {
-        const validSgpa = formData.sgpa.filter(s => s && !isNaN(s)).map(s => parseFloat(s))
-        if (validSgpa.length === 6) {
-            return (validSgpa.reduce((sum, val) => sum + val, 0) / 6).toFixed(2)
+        const validSgpa = formData.sgpa.filter(s => s && !isNaN(s) && parseFloat(s) > 0).map(s => parseFloat(s))
+        if (validSgpa.length > 0) {
+            return (validSgpa.reduce((sum, val) => sum + val, 0) / validSgpa.length).toFixed(2)
         }
         return '0.00'
     }
@@ -136,7 +140,12 @@ function StudentDetail() {
         'Electronics & Telecommunication': ['Embedded Systems', 'IoT', 'Signal Processing', 'Communication Systems', 'VLSI Design', 'Robotics', 'Control Systems', 'Wireless Communication', 'Digital Electronics', 'Analog Electronics', 'Telecommunication', 'Network Security'],
         'Mechanical Engineering': ['CAD/CAM', 'Robotics', 'Automotive Engineering', 'Manufacturing', 'Thermal Engineering', 'Fluid Mechanics', 'Materials Science', 'Structural Analysis', 'Mechatronics', 'Quality Control', 'Product Design', 'HVAC Systems'],
         'Civil Engineering': ['Structural Engineering', 'Geotechnical Engineering', 'Transportation Engineering', 'Environmental Engineering', 'Construction Management', 'Surveying', 'Water Resources', 'Urban Planning', 'Building Information Modeling', 'Project Management', 'Sustainable Design', 'Infrastructure Development'],
-        'Electrical Engineering': ['Power Systems', 'Control Systems', 'Electrical Machines', 'Renewable Energy', 'Electronics', 'Instrumentation', 'Automation', 'Smart Grids', 'Embedded Systems', 'Signal Processing', 'Electrical Design', 'Maintenance Engineering']
+        'Electrical Engineering': ['Power Systems', 'Control Systems', 'Electrical Machines', 'Renewable Energy', 'Electronics', 'Instrumentation', 'Automation', 'Smart Grids', 'Embedded Systems', 'Signal Processing', 'Electrical Design', 'Maintenance Engineering'],
+        'AIML': ['Web Development', 'Mobile Development', 'Data Science', 'Machine Learning', 'Cybersecurity', 'Cloud Computing', 'DevOps', 'Blockchain', 'AI/ML', 'IoT', 'Software Engineering', 'Database Management'],
+        'AIDS':['Web Development', 'Mobile Development', 'Data Science', 'Machine Learning', 'Cybersecurity', 'Cloud Computing', 'DevOps', 'Blockchain', 'AI/ML', 'IoT', 'Software Engineering', 'Database Management'],
+        'CSE(IOT)': ['Web Development', 'Mobile Development', 'Data Science', 'Machine Learning', 'Cybersecurity', 'Cloud Computing', 'DevOps', 'Blockchain', 'AI/ML', 'IoT', 'Software Engineering', 'Database Management'],
+        'Computer Designing':['Web Development', 'Mobile Development', 'Data Science', 'Machine Learning', 'Cybersecurity', 'Cloud Computing', 'DevOps', 'Blockchain', 'AI/ML', 'IoT', 'Software Engineering', 'Database Management'],
+        'Computer Technology': ['Web Development', 'Mobile Development', 'Data Science', 'Machine Learning', 'Cybersecurity', 'Cloud Computing', 'DevOps', 'Blockchain', 'AI/ML', 'IoT', 'Software Engineering', 'Database Management'],
     }
 
     useEffect(() => {
@@ -265,21 +274,51 @@ function StudentDetail() {
                                     />
                                 </div>
                             </div>
+                            <div>
+                                <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Year of Study</label>
+                                <select 
+                                    name="yearOfStudy" value={formData.yearOfStudy} onChange={(e) => setFormData(prev => ({ ...prev, yearOfStudy: e.target.value, currentSemester: '' }))} required
+                                    className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:ring-2 focus:ring-cyan-500 focus:bg-white transition-all font-bold text-slate-700"
+                                >
+                                    <option value="">Select Year</option>
+                                    {[2, 3, 4].map(y => <option key={y} value={y}>{y}th Year</option>)}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Current Semester</label>
+                                <select 
+                                    name="currentSemester" value={formData.currentSemester} onChange={handleInputChange} required
+                                    disabled={!formData.yearOfStudy}
+                                    className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:ring-2 focus:ring-cyan-500 focus:bg-white transition-all font-bold text-slate-700 disabled:opacity-50"
+                                >
+                                    <option value="">Select Semester</option>
+                                    {formData.yearOfStudy === '2' && [3, 4].map(s => <option key={s} value={s}>{s}th Semester</option>)}
+                                    {formData.yearOfStudy === '3' && [5, 6].map(s => <option key={s} value={s}>{s}th Semester</option>)}
+                                    {formData.yearOfStudy === '4' && [7, 8].map(s => <option key={s} value={s}>{s}th Semester</option>)}
+                                </select>
+                            </div>
                         </div>
 
                         <div className="mt-8">
-                            <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-4">Semester Performance (SGPA)</label>
-                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
-                                {[1, 2, 3, 4, 5, 6].map((sem) => (
-                                    <div key={sem} className="relative group">
-                                        <span className="absolute -top-2 left-3 bg-white px-1 text-[10px] font-black text-cyan-600 uppercase tracking-tighter z-10">Sem {sem}</span>
-                                        <input 
-                                            type="number" step="0.01" value={formData.sgpa[sem-1]} onChange={(e) => handleSgpaChange(sem-1, e.target.value)}
-                                            className="w-full pt-4 pb-2 px-3 rounded-xl border border-slate-200 text-center font-black text-slate-700 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
-                                            placeholder="0.00"
-                                        />
-                                    </div>
-                                ))}
+                            <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-4">Previous Semester Performance (SGPA)</label>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-4">
+                                {formData.currentSemester ? (
+                                    Array.from({ length: parseInt(formData.currentSemester) - 1 }, (_, i) => i + 1).map((sem) => (
+                                        <div key={sem} className="relative group">
+                                            <span className="absolute -top-2 left-3 bg-white px-1 text-[10px] font-black text-cyan-600 uppercase tracking-tighter z-10">Sem {sem}</span>
+                                            <input 
+                                                type="number" step="0.01" value={formData.sgpa[sem-1]} onChange={(e) => handleSgpaChange(sem-1, e.target.value)}
+                                                className="w-full pt-4 pb-2 px-3 rounded-xl border border-slate-200 text-center font-black text-slate-700 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
+                                                placeholder="0.00"
+                                            />
+                                        </div>
+                                    ))
+                                ) : (
+                                    <p className="col-span-full text-slate-400 font-bold italic text-sm py-4 p-4 bg-slate-50 rounded-xl border border-dashed border-slate-200 flex items-center gap-2">
+                                        <Info size={16} className="text-cyan-600" />
+                                        Please select your year and current semester to fill previous SGPA details.
+                                    </p>
+                                )}
                             </div>
                         </div>
                     </div>

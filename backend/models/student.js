@@ -28,6 +28,14 @@ const student = new mongoose.Schema({
         type:[Number],
         required: true
     },
+    yearOfStudy: {
+        type: Number,
+        default: null
+    },
+    currentSemester: {
+        type: Number,
+        default: null
+    },
     role:{
         type:String,
         default:'student'

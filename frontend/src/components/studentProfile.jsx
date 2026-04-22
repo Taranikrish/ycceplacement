@@ -127,8 +127,10 @@ function StudentProfile() {
                 <h2 className="text-xl font-black">Academic Credentials</h2>
               </div>
               
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
                 <InfoBlock icon={<Hash />} label="Roll Number" value={studentProfile?.rollNumber} />
+                <InfoBlock icon={<Award />} label="Year of Study" value={studentProfile?.yearOfStudy ? `${studentProfile.yearOfStudy}th Year` : 'N/A'} />
+                <InfoBlock icon={<Award />} label="Current Semester" value={studentProfile?.currentSemester ? `${studentProfile.currentSemester}th Semester` : 'N/A'} />
                 <InfoBlock icon={<Award />} label="Current CGPA" value={studentProfile?.cgpa ? Number(studentProfile.cgpa).toFixed(2) : 'N/A'} isHighlight />
                 <InfoBlock icon={<ExternalLink />} label="Engineering Branch" value={studentProfile?.branch} />
                 <InfoBlock icon={<Award />} label="Registration Status" value={studentProfile?.isregistered ? 'Complete' : 'Pending'} />
